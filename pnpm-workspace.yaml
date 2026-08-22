@@ -96,6 +96,7 @@ catalog:
   "vitest": "4.1.10"
   "zod": "^4.4.3"
   "zustand": "^5.0.0"
+  '@types/jest': ^30.0.0
 
 allowBuilds:
   "@nestjs/core": true

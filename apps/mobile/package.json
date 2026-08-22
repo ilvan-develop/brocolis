@@ -45,6 +45,7 @@
   "devDependencies": {
     "@biomejs/biome": "catalog:",
     "@testing-library/react-native": "catalog:",
+    "@types/jest": "catalog:",
     "@types/react": "catalog:",
     "jest": "catalog:",
     "jest-expo": "catalog:",
