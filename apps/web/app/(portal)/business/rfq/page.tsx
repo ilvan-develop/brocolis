@@ -1,7 +1,7 @@
 "use client";
 
 import { formatCurrency } from "@brocolis/formatters";
-import { tF4 } from "@brocolis/i18n";
+import { tF4, type F4MessageKey } from "@brocolis/i18n";
 import { Badge } from "@brocolis/ui/components/badge";
 import {
   Card,
@@ -95,7 +95,7 @@ export default function BusinessRfqPage() {
                     <td className="py-2 pr-4">{rfq.subject}</td>
                     <td className="py-2">
                       <Badge variant={RFQ_STATUS_VARIANT[rfq.status]}>
-                        {tF4(`procurement.status.${rfq.status}`)}
+                        {tF4(`procurement.status.${rfq.status}` as F4MessageKey)}
                       </Badge>
                     </td>
                   </tr>

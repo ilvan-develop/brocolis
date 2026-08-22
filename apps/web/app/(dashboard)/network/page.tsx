@@ -11,7 +11,7 @@ import {
 import { Badge } from "@brocolis/ui/components/badge";
 import { Skeleton } from "@brocolis/ui/components/skeleton";
 import { useNetworkTimeline } from "@/lib/network-query";
-import { NETWORK_STAGE_KEY, NETWORK_STATUS_KEY, NETWORK_STATUS_VARIANT } from "@/lib/network-timeline";
+import { NETWORK_STAGE_KEY, NETWORK_STATUS_KEY, NETWORK_STATUS_VARIANT, type NetworkStageStatus, type NetworkStageName } from "@/lib/network-timeline";
 
 export default function NetworkPage() {
   const { stages, isLoading, isError, refetch } = useNetworkTimeline();
@@ -67,14 +67,14 @@ export default function NetworkPage() {
                   >
                     <div className="flex flex-1 flex-col gap-1">
                       <span className="text-sm font-medium">
-                        {tF6(NETWORK_STAGE_KEY[stage.stage])}
+                        {tF6(NETWORK_STAGE_KEY[stage.stage as NetworkStageName])}
                       </span>
                       <span className="text-muted-foreground text-xs">
-                        {stage.owner} · {tF6(NETWORK_STATUS_KEY[stage.status])}
+                         {stage.owner} · {tF6(NETWORK_STATUS_KEY[stage.status as NetworkStageStatus])}
                       </span>
                     </div>
-                    <Badge variant={NETWORK_STATUS_VARIANT[stage.status]}>
-                      {tF6(NETWORK_STATUS_KEY[stage.status])}
+                    <Badge variant={NETWORK_STATUS_VARIANT[stage.status as NetworkStageStatus]}>
+                      {tF6(NETWORK_STATUS_KEY[stage.status as NetworkStageStatus])}
                     </Badge>
                   </div>
                 ))}

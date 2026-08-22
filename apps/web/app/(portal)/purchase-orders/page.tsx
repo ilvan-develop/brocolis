@@ -1,7 +1,7 @@
 "use client";
 
 import { formatCurrency } from "@brocolis/formatters";
-import { tF4 } from "@brocolis/i18n";
+import { tF4, type F4MessageKey } from "@brocolis/i18n";
 import { Badge } from "@brocolis/ui/components/badge";
 import {
   Card,
@@ -112,7 +112,7 @@ export default function BusinessPurchaseOrdersPage() {
                     </td>
                     <td className="py-2">
                       <Badge variant={PO_STATUS_VARIANT[po.status]}>
-                        {tF4(`procurement.status.${po.status}`)}
+                        {tF4(`procurement.status.${po.status}` as F4MessageKey)}
                       </Badge>
                     </td>
                   </tr>

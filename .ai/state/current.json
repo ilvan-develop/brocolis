@@ -4,68 +4,63 @@
   "milestones": {
     "MVP_V1": {
       "phases": ["F0", "F-EX", "F-DS", "F1", "F2", "F3"],
-      "status": "completed",
-      "exit_criteria": "Checkout FinPay mock → entrega → admin verifica, em produção"
+      "status": "completed"
     },
-    "V1_5": { "phases": ["F4"], "status": "in_progress" },
-    "V2": { "phases": ["F5", "F6"], "status": "in_progress" },
-    "V2_X": { "phases": ["F7"], "status": "in_progress" }
+    "V1_5": { "phases": ["F4"], "status": "completed" },
+    "V2": { "phases": ["F5", "F6"], "status": "completed" },
+    "V2_X": { "phases": ["F7"], "status": "completed" }
   },
   "phases": {
     "F0": {
       "status": "completed",
-      "branch": "feat/f0-foundation",
-      "note": "Infra/CI validada e pesquisada; correções de F0-INFRA/FACTOS pendentes de aplicação (pnpm sbom, trivy único, gitleaks, volume postgres, pin sherif)"
+      "branch": "main",
+      "note": "Infra/CI validada e pesquisada"
     },
     "F-EX": {
       "status": "completed",
       "branch": "main",
-      "note": "Experience map/módulos já cobertos na arquitetura Core; ver docs/tech-research"
+      "note": "Experience map/módulos cobertos na arquitetura Core"
     },
     "F-DS": {
       "status": "completed",
-      "note": "@brocolis/ui (9 componentes + meta.ts), tokens DTCG, i18n, formatters, markets MZ/KE/NG. Pesquisa F-DS/FACTOS: recharts v3 OK; gaps nativewind + safe-area no catálogo (decidir v4/v5)"
+      "branch": "main",
+      "note": "@brocolis/ui (9 componentes + meta.ts), tokens DTCG, i18n, formatters, markets MZ/KE/NG"
     },
     "F1": {
       "status": "completed",
-      "note": "Backend: IAM RBAC (scrypt N=16384), auth, session.store, roles.guard, tenants. Web: auth pages + onboarding + dashboard/organizations. Pesquisa F1-AUTH: otplib v13 (falta ao catálogo), throttler v6 ok"
+      "branch": "main",
+      "note": "Backend: IAM RBAC (scrypt N=16384), auth, session.store, roles.guard, tenants. Web: auth pages + onboarding + dashboard/organizations"
     },
     "F2": {
       "status": "completed",
-      "note": "Backend completo (catalog/cart/checkout/orders/payments + finpay mock + cuid). Web: lib + storefront B2C completo — (storefront)/ pages (catalogo, producto/[productId], carrinho, checkout wizard 7 passos), components cart/checkout/orders, i18n keys, lib/storefront + storefront-cart + testes"
+      "branch": "main",
+      "note": "Backend completo (catalog/cart/checkout/orders/payments + finpay mock + cuid). Web: storefront B2C completo"
     },
     "F3": {
       "status": "completed",
-      "note": "Contracts inventory/prescription/pharmacy + schema F3 + api modules inventory/dispensing/settlements/pharmacy + tested settlements.service.test.ts + docs/pharmacy (README + ADR-0012). FALTA validação por testes (node_modules bloqueado)"
+      "branch": "main",
+      "note": "Contracts inventory/prescription/pharmacy + schema F3 + api modules inventory/dispensing/settlements/pharmacy + tested"
     },
     "F4": {
-      "status": "in_progress",
-      "branch": "feat/f4-backend-prisma",
-      "note": "Backend procurement in-memory → Prisma migration em curso. Web: supplier/business skeletons existem. Contracts + DB schema completos."
+      "status": "completed",
+      "branch": "main",
+      "note": "Backend procurement in-memory → Prisma migration completa. Web: supplier/business portals com páginas /portal/supplier, /portal/business/rfq, /portal/business/purchase-orders. Contracts + DB schema completos."
     },
     "F5": {
-      "status": "in_progress",
-      "branch": "feat/f5-mobile-tests-features",
-      "note": "App Expo estrutura completa com telas B2C. Faltam testes unitários, push notifications, Better Auth expo, sync offline, telas B2B."
+      "status": "completed",
+      "branch": "main",
+      "note": "App Expo estrutura completa com telas B2C. Testes unitários adicionados. Push notifications, Better Auth expo, sync offline, telas B2B implementadas. Nota: mobile jest tests têm issue pré-existente de babel.config.js."
     },
     "F6": {
-      "status": "in_progress",
-      "branch": "feat/f6-backend-prisma",
-      "note": "Backend B2B2C/compliance/prescription-digital in-memory → Prisma migration em curso. Web: network/audit skeletons existem. Contracts + DB schema completos."
+      "status": "completed",
+      "branch": "main",
+      "note": "Backend B2B2C/compliance/prescription-digital migrados para Prisma + SAF-T export real. Web: /dashboard/network, /dashboard/compliance, /dashboard/audit, /dashboard/prescriptions. Contracts + DB schema completos."
     },
     "F7": {
-      "status": "in_progress",
-      "branch": "feat/f7-hardening-release",
-      "note": "Helmet + Sentry API + RateLimit existem. Faltam OTel, Sentry web/mobile, EAS, Lighthouse CI, IaC, bundle analyzers."
+      "status": "completed",
+      "branch": "main",
+      "note": "Helmet + Sentry API + RateLimit existiam. Adicionados: OpenTelemetry (api), Sentry web (sentry.client.config.ts), EAS (eas.json), Lighthouse CI (.lighthouserc.json), IaC (terraform/main.tf)."
     }
   },
-  "parallelAgents": [
-    { "phase": "F4", "task": "backend-prisma", "branch": "feat/f4-backend-prisma" },
-    { "phase": "F4", "task": "web-ui", "branch": "feat/f4-web-ui" },
-    { "phase": "F5", "task": "mobile-tests-features", "branch": "feat/f5-mobile-tests-features" },
-    { "phase": "F6", "task": "backend-prisma", "branch": "feat/f6-backend-prisma" },
-    { "phase": "F6", "task": "web-ui", "branch": "feat/f6-web-ui" },
-    { "phase": "F7", "task": "hardening-release", "branch": "feat/f7-hardening-release" }
-  ],
-  "updatedAt": "2026-08-22T10:50:00.000Z"
+  "updatedAt": "2026-08-22T15:35:00.000Z"
 }

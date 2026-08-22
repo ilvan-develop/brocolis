@@ -8,7 +8,7 @@ export type F4Locale =
 
 export const F4_MESSAGES = {
   "pt-AO": {
-    "procurement.title": "Aquisições B2B",
+    "error.generic": "Ocorreu um erro desconhecido.",    "procurement.title": "Aquisições B2B",
     "procurement.subtitle": "Gestão de RFQ, cotações e ordens de compra",
     "procurement.rfq.title": "Pedidos de Cotação (RFQ)",
     "procurement.rfq.create": "Novo RFQ",
@@ -95,7 +95,7 @@ export const F4_MESSAGES = {
     "procurement.status.COMPLETED": "Concluído",
   },
   "pt-MZ": {
-    "procurement.title": "Aquisições B2B",
+    "error.generic": "Ocorreu um erro desconhecido.",    "procurement.title": "Aquisições B2B",
     "procurement.subtitle": "Gestão de RFQ, cotações e ordens de compra",
     "procurement.rfq.title": "Pedidos de Cotação (RFQ)",
     "procurement.rfq.create": "Novo RFQ",
@@ -182,7 +182,7 @@ export const F4_MESSAGES = {
     "procurement.status.COMPLETED": "Concluído",
   },
   "en-KE": {
-    "procurement.title": "B2B Procurement",
+    "error.generic": "Ocorreu um erro desconhecido.",    "procurement.title": "B2B Procurement",
     "procurement.subtitle": "Manage RFQs, quotations and purchase orders",
     "procurement.rfq.title": "Request for Quotation (RFQ)",
     "procurement.rfq.create": "New RFQ",
@@ -269,7 +269,7 @@ export const F4_MESSAGES = {
     "procurement.status.COMPLETED": "Completed",
   },
   "en-NG": {
-    "procurement.title": "B2B Procurement",
+    "error.generic": "Ocorreu um erro desconhecido.",    "procurement.title": "B2B Procurement",
     "procurement.subtitle": "Manage RFQs, quotations and purchase orders",
     "procurement.rfq.title": "Request for Quotation (RFQ)",
     "procurement.rfq.create": "New RFQ",
@@ -356,7 +356,7 @@ export const F4_MESSAGES = {
     "procurement.status.COMPLETED": "Completed",
   },
   "fr-SN": {
-    "procurement.title": "Approvisionnement B2B",
+    "error.generic": "Ocorreu um erro desconhecido.",    "procurement.title": "Approvisionnement B2B",
     "procurement.subtitle": "Gestion des RFQ, devis et bons de commande",
     "procurement.rfq.title": "Demande de devis (RFQ)",
     "procurement.rfq.create": "Nouveau RFQ",
@@ -444,7 +444,7 @@ export const F4_MESSAGES = {
     "procurement.status.COMPLETED": "Terminé",
   },
   "ar-EG": {
-    "procurement.title": "المشتريات B2B",
+    "error.generic": "Ocorreu um erro desconhecido.",    "procurement.title": "المشتريات B2B",
     "procurement.subtitle": "إدارة طلبات عروض الأسعار وأوامر الشراء",
     "procurement.rfq.title": "طلب عرض سعر (RFQ)",
     "procurement.rfq.create": "RFQ جديد",

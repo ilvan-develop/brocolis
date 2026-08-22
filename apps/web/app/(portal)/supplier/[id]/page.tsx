@@ -1,6 +1,6 @@
 "use client";
 
-import { tF4 } from "@brocolis/i18n";
+import { tF4, type F4MessageKey } from "@brocolis/i18n";
 import { Badge } from "@brocolis/ui/components/badge";
 import {
   Card,
@@ -76,7 +76,7 @@ export default function SupplierDetailPage({
             {supplier.name}
           </h1>
           <Badge variant={STATUS_VARIANT[supplier.status]}>
-            {tF4(`procurement.supplier.${supplier.status.toLowerCase()}`)}
+            {tF4(`procurement.supplier.${supplier.status.toLowerCase()}` as F4MessageKey)}
           </Badge>
         </div>
         <p className="text-muted-foreground text-sm">
@@ -129,7 +129,7 @@ export default function SupplierDetailPage({
                 </dt>
                 <dd>
                   <Badge variant={STATUS_VARIANT[supplier.status]}>
-                    {tF4(`procurement.supplier.${supplier.status.toLowerCase()}`)}
+            {tF4(`procurement.supplier.${supplier.status.toLowerCase()}` as F4MessageKey)}
                   </Badge>
                 </dd>
               </div>

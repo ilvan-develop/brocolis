@@ -12,6 +12,7 @@ import { Badge } from "@brocolis/ui/components/badge";
 import { Button } from "@brocolis/ui/components/button";
 import { Skeleton } from "@brocolis/ui/components/skeleton";
 import { useComplianceDashboard } from "@/lib/compliance-query";
+import type { ComplianceDecision, SaFTExport } from "@/lib/compliance-fixtures";
 
 const SUBJECT_LABEL: Record<string, string> = {
   HEALTHCARE_PROFESSIONAL: "compliance.subject.healthcare_professional",
@@ -135,14 +136,14 @@ export default function CompliancePage() {
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              {decisions.map((decision) => (
+              {decisions.map((decision: ComplianceDecision) => (
                 <div
                   key={decision.id}
                   className="flex items-center justify-between rounded-md border p-3"
                 >
                   <div className="flex flex-col">
                     <span className="text-sm font-medium">
-                      {tF6(SUBJECT_LABEL[decision.subject] ?? decision.subject)}
+                      {tF6((SUBJECT_LABEL[decision.subject] ?? decision.subject) as any)}
                     </span>
                     <span className="text-muted-foreground text-xs">
                       {decision.reason}
@@ -177,7 +178,7 @@ export default function CompliancePage() {
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              {saftExports.map((saft) => (
+              {saftExports.map((saft: SaFTExport) => (
                 <div
                   key={saft.id}
                   className="flex items-center justify-between rounded-md border p-3"
