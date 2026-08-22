@@ -90,7 +90,50 @@
         "F6-web: network timeline + compliance UI + audit explorer + e-prescription workflow.",
         "F7-hardening: OpenTelemetry + Sentry web/mobile + EAS config + Lighthouse CI + IaC + bundle analyzers."
       ]
+    },
+    "9F4-MERGE": {
+      "date": "2026-08-22",
+      "category": "implementation",
+      "block": "F4-INTEGRATION",
+      "evidence": [
+        "F4 backend (feat/f4-procurement) integrado no main via merge com resolução de conflitos a favor do agente.",
+        "Gates F4 backend: typecheck OK (8/8 pacotes), test:unit OK (230 testes, 19 ficheiros).",
+        "Conflitos resolvidos: procurement.service.test.ts, purchase-order.service.ts, quotation.service.ts, rfq.service.ts.",
+        "Novos ficheiros: invoice.service.ts, pricing.service.ts."
+      ]
+    },
+    "10F5-MERGE": {
+      "date": "2026-08-22",
+      "category": "implementation",
+      "block": "F5-INTEGRATION",
+      "evidence": [
+        "F5 mobile (feat/f5-mobile) integrado no main via merge sem conflitos.",
+        "Novos testes unitários: CartSummary, OrderStatusTimeline, ProductCard, button, empty-state, api, auth, i18n, order-queue, utils, auth-store, cart-store.",
+        "Novas features: checkout.tsx atualizado, CartSummary.tsx, order-queue.ts (sync offline), providers/query-provider.tsx.",
+        "Fixes: adicionado @types/jest para typecheck, removido babel.config.cjs obsoleto."
+      ]
+    },
+    "11F5-EXISTING-ISSUE": {
+      "date": "2026-08-22",
+      "category": "audit",
+      "block": "F5-EXISTING-BUG",
+      "evidence": [
+        "Descoberta: testes unitários do mobile já estavam quebrados antes do merge do F5 (12 suites falhando no babel.config.js).",
+        "Causa raiz: Babel/jest não consegue parsear babel.config.js CommonJS no ambiente atual.",
+        "Decisão: não bloqueante para integração do F5; reportado como issue pré-existente."
+      ]
+    },
+    "12F6-F7-RELAUNCH": {
+      "date": "2026-08-22",
+      "category": "implementation",
+      "block": "F6-F7-PARALLEL",
+      "evidence": [
+        "4 agentes adicionais relançados em worktrees isolados para fases que não tinham progresso.",
+        "F6 backend (feat/f6-backend-prisma): migração B2B2C/compliance para Prisma + SAF-T export real.",
+        "F6 web (feat/f6-web-ui): páginas /network, /compliance, /audit, /prescriptions.",
+        "F7 hardening (feat/f7-hardening-release): OTel, Sentry, EAS, Lighthouse CI, IaC."
+      ]
     }
   },
-  "updatedAt": "2026-08-22T10:55:00.000Z"
+  "updatedAt": "2026-08-22T13:00:00.000Z"
 }

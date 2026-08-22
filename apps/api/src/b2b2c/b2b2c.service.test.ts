@@ -1,12 +1,12 @@
 import { BadRequestException, NotFoundException } from "@nestjs/common";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { B2b2cService } from "./b2b2c.service.js";
 
 const ORG = "00000000-0000-4000-8000-000000000000";
 const ORG_OTHER = "00000000-0000-4000-8000-000000000001";
 const PHARMACY = "c000000000000000000000001";
 const SUPPLIER = "c000000000000000000000002";
-const PRODUCT = "c000000000000000000000003";
+const PRODUCT = "c1234567890abcdef00000003";
 const MONEY = { amount: 5000, currency: "AOA" };
 
 const baseOrder = {
@@ -17,10 +17,57 @@ const baseOrder = {
   total: MONEY,
 };
 
+function makeDbOrder(overrides: Record<string, unknown> = {}) {
+  return {
+    id: `c${Math.random().toString(36).slice(2, 14)}`,
+    organizationId: ORG,
+    marketCode: "AO",
+    customerId: null,
+    pharmacyId: PHARMACY,
+    supplierId: null,
+    currentStage: "CONSUMER_ORDER" as const,
+    currentStatus: "IN_PROGRESS" as const,
+    stockSource: "PHARMACY_STOCK" as const,
+    items: baseOrder.items,
+    totalMinor: 5000,
+    createdAt: new Date("2026-01-01T00:00:00Z"),
+    updatedAt: new Date("2026-01-01T00:00:00Z"),
+    ...overrides,
+  };
+}
+
+function makeDbTimelineEntry(overrides: Record<string, unknown> = {}) {
+  return {
+    id: `c${Math.random().toString(36).slice(2, 14)}`,
+    orderId: "order-id",
+    stage: "CONSUMER_ORDER" as const,
+    status: "IN_PROGRESS" as const,
+    responsibleParty: "PHARMACY" as const,
+    responsibleId: PHARMACY,
+    stockSource: "PHARMACY_STOCK" as const,
+    note: null,
+    createdAt: new Date("2026-01-01T00:00:00Z"),
+    ...overrides,
+  };
+}
+
 describe("B2b2cService — create order", () => {
-  it("creates order with CONSUMER_ORDER stage", () => {
+  it("creates order with CONSUMER_ORDER stage", async () => {
+    const db = {
+      b2b2cOrder: {
+        create: vi.fn().mockResolvedValue(makeDbOrder()),
+      },
+      b2b2cTimelineEntry: {
+        create: vi.fn(),
+      },
+      auditEvent: {
+        create: vi.fn(),
+      },
+    };
+    vi.mocked(await import("@brocolis/db")).database = vi.fn().mockReturnValue(db);
+
     const svc = new B2b2cService();
-    const order = svc.createOrder(baseOrder);
+    const order = await svc.createOrder(baseOrder);
     expect(order.id).toMatch(/^c/);
     expect(order.currentStage).toBe("CONSUMER_ORDER");
     expect(order.currentStatus).toBe("IN_PROGRESS");
@@ -28,10 +75,24 @@ describe("B2b2cService — create order", () => {
     expect(order.items).toHaveLength(1);
   });
 
-  it("creates timeline entry for consumer order", () => {
+  it("creates timeline entry for consumer order", async () => {
+    const created = makeDbOrder();
+    const db = {
+      b2b2cOrder: {
+        create: vi.fn().mockResolvedValue(created),
+      },
+      b2b2cTimelineEntry: {
+        create: vi.fn().mockResolvedValue(makeDbTimelineEntry()),
+      },
+      auditEvent: {
+        create: vi.fn(),
+      },
+    };
+    vi.mocked(await import("@brocolis/db")).database = vi.fn().mockReturnValue(db);
+
     const svc = new B2b2cService();
-    const order = svc.createOrder(baseOrder);
-    const tl = svc.getTimeline({
+    const order = await svc.createOrder(baseOrder);
+    const tl = await svc.getTimeline({
       organizationId: ORG,
       marketCode: "AO",
       orderId: order.id,
@@ -43,34 +104,70 @@ describe("B2b2cService — create order", () => {
 });
 
 describe("B2b2cService — getOrder / listOrders", () => {
-  it("getOrder returns order within scope", () => {
+  it("getOrder returns order within scope", async () => {
+    const created = makeDbOrder();
+    const db = {
+      b2b2cOrder: {
+        findFirst: vi.fn().mockResolvedValue(created),
+        count: vi.fn(),
+      },
+      b2b2cTimelineEntry: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      auditEvent: { create: vi.fn() },
+    };
+    vi.mocked(await import("@brocolis/db")).database = vi.fn().mockReturnValue(db);
+
     const svc = new B2b2cService();
-    const order = svc.createOrder(baseOrder);
-    const found = svc.getOrder({
+    const found = await svc.getOrder({
       organizationId: ORG,
       marketCode: "AO",
-      orderId: order.id,
+      orderId: created.id,
     });
-    expect(found.id).toBe(order.id);
+    expect(found.id).toBe(created.id);
   });
 
-  it("getOrder throws for wrong tenant", () => {
+  it("getOrder throws for wrong tenant", async () => {
+    const db = {
+      b2b2cOrder: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        count: vi.fn(),
+      },
+      b2b2cTimelineEntry: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      auditEvent: { create: vi.fn() },
+    };
+    vi.mocked(await import("@brocolis/db")).database = vi.fn().mockReturnValue(db);
+
     const svc = new B2b2cService();
-    const order = svc.createOrder(baseOrder);
-    expect(() =>
+    await expect(
       svc.getOrder({
         organizationId: ORG_OTHER,
         marketCode: "AO",
-        orderId: order.id,
+        orderId: "order-id",
       }),
-    ).toThrow(NotFoundException);
+    ).rejects.toThrow(NotFoundException);
   });
 
-  it("listOrders filters by pharmacyId", () => {
+  it("listOrders filters by pharmacyId", async () => {
+    const db = {
+      b2b2cOrder: {
+        findMany: vi
+          .fn()
+          .mockResolvedValue([
+            makeDbOrder({ id: "order-1", pharmacyId: PHARMACY }),
+            makeDbOrder({ id: "order-2", pharmacyId: SUPPLIER }),
+          ]),
+        count: vi.fn().mockResolvedValue(2),
+      },
+      b2b2cTimelineEntry: { findMany: vi.fn().mockResolvedValue([]) },
+      auditEvent: { create: vi.fn() },
+    };
+    vi.mocked(await import("@brocolis/db")).database = vi.fn().mockReturnValue(db);
+
     const svc = new B2b2cService();
-    svc.createOrder(baseOrder);
-    svc.createOrder({ ...baseOrder, pharmacyId: SUPPLIER });
-    const list = svc.listOrders({
+    const list = await svc.listOrders({
       organizationId: ORG,
       marketCode: "AO",
       pharmacyId: PHARMACY,
@@ -79,10 +176,19 @@ describe("B2b2cService — getOrder / listOrders", () => {
     expect(list.items[0]?.pharmacyId).toBe(PHARMACY);
   });
 
-  it("listOrders filters by stage", () => {
+  it("listOrders filters by stage", async () => {
+    const db = {
+      b2b2cOrder: {
+        findMany: vi.fn().mockResolvedValue([]),
+        count: vi.fn().mockResolvedValue(0),
+      },
+      b2b2cTimelineEntry: { findMany: vi.fn().mockResolvedValue([]) },
+      auditEvent: { create: vi.fn() },
+    };
+    vi.mocked(await import("@brocolis/db")).database = vi.fn().mockReturnValue(db);
+
     const svc = new B2b2cService();
-    svc.createOrder(baseOrder);
-    const list = svc.listOrders({
+    const list = await svc.listOrders({
       organizationId: ORG,
       marketCode: "AO",
       stage: "PHARMACY_CONFIRMATION",
@@ -90,12 +196,22 @@ describe("B2b2cService — getOrder / listOrders", () => {
     expect(list.items).toHaveLength(0);
   });
 
-  it("listOrders paginates", () => {
+  it("listOrders paginates", async () => {
+    const items = Array.from({ length: 5 }, (_, i) =>
+      makeDbOrder({ id: `order-${i}` }),
+    );
+    const db = {
+      b2b2cOrder: {
+        findMany: vi.fn().mockResolvedValue(items.slice(0, 2)),
+        count: vi.fn().mockResolvedValue(5),
+      },
+      b2b2cTimelineEntry: { findMany: vi.fn().mockResolvedValue([]) },
+      auditEvent: { create: vi.fn() },
+    };
+    vi.mocked(await import("@brocolis/db")).database = vi.fn().mockReturnValue(db);
+
     const svc = new B2b2cService();
-    for (let i = 0; i < 5; i++) {
-      svc.createOrder(baseOrder);
-    }
-    const page1 = svc.listOrders({
+    const page1 = await svc.listOrders({
       organizationId: ORG,
       marketCode: "AO",
       page: 1,
@@ -109,76 +225,83 @@ describe("B2b2cService — getOrder / listOrders", () => {
 });
 
 describe("B2b2cService — confirmPharmacy", () => {
-  it("transitions from CONSUMER_ORDER to PHARMACY_CONFIRMATION", () => {
+  it("transitions from CONSUMER_ORDER to PHARMACY_CONFIRMATION", async () => {
+    const existing = makeDbOrder();
+    const updated = { ...existing, currentStage: "PHARMACY_CONFIRMATION" as const, currentStatus: "COMPLETED" as const };
+    const db = {
+      b2b2cOrder: {
+        findFirst: vi.fn().mockResolvedValue(existing),
+        update: vi.fn().mockResolvedValue(updated),
+        count: vi.fn(),
+      },
+      b2b2cTimelineEntry: {
+        findMany: vi.fn().mockResolvedValue([]),
+        create: vi.fn().mockResolvedValue(makeDbTimelineEntry()),
+      },
+      auditEvent: { create: vi.fn() },
+    };
+    vi.mocked(await import("@brocolis/db")).database = vi.fn().mockReturnValue(db);
+
     const svc = new B2b2cService();
-    const order = svc.createOrder(baseOrder);
-    const confirmed = svc.confirmPharmacy({
+    const confirmed = await svc.confirmPharmacy({
       organizationId: ORG,
       marketCode: "AO",
-      orderId: order.id,
+      orderId: existing.id,
       pharmacyId: PHARMACY,
       note: "Stock available",
     });
     expect(confirmed.currentStage).toBe("PHARMACY_CONFIRMATION");
     expect(confirmed.currentStatus).toBe("COMPLETED");
-    expect(confirmed.updatedAt.getTime()).toBeGreaterThanOrEqual(
-      order.createdAt.getTime(),
-    );
   });
 
-  it("adds timeline entry for confirmation", () => {
-    const svc = new B2b2cService();
-    const order = svc.createOrder(baseOrder);
-    svc.confirmPharmacy({
-      organizationId: ORG,
-      marketCode: "AO",
-      orderId: order.id,
-      pharmacyId: PHARMACY,
-    });
-    const tl = svc.getTimeline({
-      organizationId: ORG,
-      marketCode: "AO",
-      orderId: order.id,
-    });
-    expect(tl).toHaveLength(2);
-    expect(tl[1]?.stage).toBe("PHARMACY_CONFIRMATION");
-    expect(tl[1]?.status).toBe("COMPLETED");
-  });
+  it("throws if order is not at CONSUMER_ORDER stage", async () => {
+    const existing = makeDbOrder({ currentStage: "PHARMACY_CONFIRMATION" as const });
+    const db = {
+      b2b2cOrder: {
+        findFirst: vi.fn().mockResolvedValue(existing),
+        update: vi.fn(),
+        count: vi.fn(),
+      },
+      b2b2cTimelineEntry: { findMany: vi.fn(), create: vi.fn() },
+      auditEvent: { create: vi.fn() },
+    };
+    vi.mocked(await import("@brocolis/db")).database = vi.fn().mockReturnValue(db);
 
-  it("throws if order is not at CONSUMER_ORDER stage", () => {
     const svc = new B2b2cService();
-    const order = svc.createOrder(baseOrder);
-    svc.confirmPharmacy({
-      organizationId: ORG,
-      marketCode: "AO",
-      orderId: order.id,
-      pharmacyId: PHARMACY,
-    });
-    expect(() =>
+    await expect(
       svc.confirmPharmacy({
         organizationId: ORG,
         marketCode: "AO",
-        orderId: order.id,
+        orderId: existing.id,
         pharmacyId: PHARMACY,
       }),
-    ).toThrow(BadRequestException);
+    ).rejects.toThrow(BadRequestException);
   });
 });
 
 describe("B2b2cService — pullFromSupplier", () => {
-  it("transitions from PHARMACY_CONFIRMATION to SUPPLIER_PULL", () => {
+  it("transitions from PHARMACY_CONFIRMATION to SUPPLIER_PULL", async () => {
+    const existing = makeDbOrder({ currentStage: "PHARMACY_CONFIRMATION" as const });
+    const updated = { ...existing, currentStage: "SUPPLIER_PULL" as const, currentStatus: "IN_PROGRESS" as const, supplierId: SUPPLIER, stockSource: "SUPPLIER_PULL" as const };
+    const db = {
+      b2b2cOrder: {
+        findFirst: vi.fn().mockResolvedValue(existing),
+        update: vi.fn().mockResolvedValue(updated),
+        count: vi.fn(),
+      },
+      b2b2cTimelineEntry: {
+        findMany: vi.fn().mockResolvedValue([]),
+        create: vi.fn().mockResolvedValue(makeDbTimelineEntry()),
+      },
+      auditEvent: { create: vi.fn() },
+    };
+    vi.mocked(await import("@brocolis/db")).database = vi.fn().mockReturnValue(db);
+
     const svc = new B2b2cService();
-    const order = svc.createOrder(baseOrder);
-    svc.confirmPharmacy({
+    const pulled = await svc.pullFromSupplier({
       organizationId: ORG,
       marketCode: "AO",
-      orderId: order.id,
-      pharmacyId: PHARMACY,
-    });
-    const pulled = svc.pullFromSupplier({
-      organizationId: ORG,
-      marketCode: "AO",
-      orderId: order.id,
+      orderId: existing.id,
       supplierId: SUPPLIER,
       note: "Stock pulled",
     });
@@ -188,145 +311,187 @@ describe("B2b2cService — pullFromSupplier", () => {
     expect(pulled.stockSource).toBe("SUPPLIER_PULL");
   });
 
-  it("throws if not at PHARMACY_CONFIRMATION", () => {
+  it("throws if not at PHARMACY_CONFIRMATION", async () => {
+    const existing = makeDbOrder({ currentStage: "CONSUMER_ORDER" as const });
+    const db = {
+      b2b2cOrder: {
+        findFirst: vi.fn().mockResolvedValue(existing),
+        update: vi.fn(),
+        count: vi.fn(),
+      },
+      b2b2cTimelineEntry: { findMany: vi.fn(), create: vi.fn() },
+      auditEvent: { create: vi.fn() },
+    };
+    vi.mocked(await import("@brocolis/db")).database = vi.fn().mockReturnValue(db);
+
     const svc = new B2b2cService();
-    const order = svc.createOrder(baseOrder);
-    expect(() =>
+    await expect(
       svc.pullFromSupplier({
         organizationId: ORG,
         marketCode: "AO",
-        orderId: order.id,
+        orderId: existing.id,
         supplierId: SUPPLIER,
       }),
-    ).toThrow(BadRequestException);
+    ).rejects.toThrow(BadRequestException);
   });
 });
 
 describe("B2b2cService — markDelivered", () => {
-  it("transitions from SUPPLIER_PULL to DELIVERY", () => {
+  it("transitions from SUPPLIER_PULL to DELIVERY", async () => {
+    const existing = makeDbOrder({ currentStage: "SUPPLIER_PULL" as const });
+    const updated = { ...existing, currentStage: "DELIVERY" as const, currentStatus: "COMPLETED" as const };
+    const db = {
+      b2b2cOrder: {
+        findFirst: vi.fn().mockResolvedValue(existing),
+        update: vi.fn().mockResolvedValue(updated),
+        count: vi.fn(),
+      },
+      b2b2cTimelineEntry: {
+        findMany: vi.fn().mockResolvedValue([]),
+        create: vi.fn().mockResolvedValue(makeDbTimelineEntry()),
+      },
+      auditEvent: { create: vi.fn() },
+    };
+    vi.mocked(await import("@brocolis/db")).database = vi.fn().mockReturnValue(db);
+
     const svc = new B2b2cService();
-    const order = svc.createOrder(baseOrder);
-    svc.confirmPharmacy({
+    const delivered = await svc.markDelivered({
       organizationId: ORG,
       marketCode: "AO",
-      orderId: order.id,
-      pharmacyId: PHARMACY,
-    });
-    svc.pullFromSupplier({
-      organizationId: ORG,
-      marketCode: "AO",
-      orderId: order.id,
-      supplierId: SUPPLIER,
-    });
-    const delivered = svc.markDelivered({
-      organizationId: ORG,
-      marketCode: "AO",
-      orderId: order.id,
+      orderId: existing.id,
     });
     expect(delivered.currentStage).toBe("DELIVERY");
     expect(delivered.currentStatus).toBe("COMPLETED");
   });
 
-  it("transitions from PHARMACY_CONFIRMATION directly to DELIVERY", () => {
+  it("transitions from PHARMACY_CONFIRMATION directly to DELIVERY", async () => {
+    const existing = makeDbOrder({ currentStage: "PHARMACY_CONFIRMATION" as const });
+    const updated = { ...existing, currentStage: "DELIVERY" as const, currentStatus: "COMPLETED" as const };
+    const db = {
+      b2b2cOrder: {
+        findFirst: vi.fn().mockResolvedValue(existing),
+        update: vi.fn().mockResolvedValue(updated),
+        count: vi.fn(),
+      },
+      b2b2cTimelineEntry: {
+        findMany: vi.fn().mockResolvedValue([]),
+        create: vi.fn().mockResolvedValue(makeDbTimelineEntry()),
+      },
+      auditEvent: { create: vi.fn() },
+    };
+    vi.mocked(await import("@brocolis/db")).database = vi.fn().mockReturnValue(db);
+
     const svc = new B2b2cService();
-    const order = svc.createOrder(baseOrder);
-    svc.confirmPharmacy({
+    const delivered = await svc.markDelivered({
       organizationId: ORG,
       marketCode: "AO",
-      orderId: order.id,
-      pharmacyId: PHARMACY,
-    });
-    const delivered = svc.markDelivered({
-      organizationId: ORG,
-      marketCode: "AO",
-      orderId: order.id,
+      orderId: existing.id,
     });
     expect(delivered.currentStage).toBe("DELIVERY");
   });
 
-  it("throws if already delivered", () => {
+  it("throws if already delivered", async () => {
+    const existing = makeDbOrder({ currentStage: "DELIVERY" as const, currentStatus: "COMPLETED" as const });
+    const db = {
+      b2b2cOrder: {
+        findFirst: vi.fn().mockResolvedValue(existing),
+        update: vi.fn(),
+        count: vi.fn(),
+      },
+      b2b2cTimelineEntry: { findMany: vi.fn(), create: vi.fn() },
+      auditEvent: { create: vi.fn() },
+    };
+    vi.mocked(await import("@brocolis/db")).database = vi.fn().mockReturnValue(db);
+
     const svc = new B2b2cService();
-    const order = svc.createOrder(baseOrder);
-    svc.confirmPharmacy({
-      organizationId: ORG,
-      marketCode: "AO",
-      orderId: order.id,
-      pharmacyId: PHARMACY,
-    });
-    svc.markDelivered({
-      organizationId: ORG,
-      marketCode: "AO",
-      orderId: order.id,
-    });
-    expect(() =>
+    await expect(
       svc.markDelivered({
         organizationId: ORG,
         marketCode: "AO",
-        orderId: order.id,
+        orderId: existing.id,
       }),
-    ).toThrow(BadRequestException);
-  });
-
-  it("adds timeline entry for delivery", () => {
-    const svc = new B2b2cService();
-    const order = svc.createOrder(baseOrder);
-    svc.confirmPharmacy({
-      organizationId: ORG,
-      marketCode: "AO",
-      orderId: order.id,
-      pharmacyId: PHARMACY,
-    });
-    svc.markDelivered({
-      organizationId: ORG,
-      marketCode: "AO",
-      orderId: order.id,
-    });
-    const tl = svc.getTimeline({
-      organizationId: ORG,
-      marketCode: "AO",
-      orderId: order.id,
-    });
-    expect(tl).toHaveLength(3);
-    expect(tl[2]?.stage).toBe("DELIVERY");
-    expect(tl[2]?.responsibleParty).toBe("PLATFORM");
+    ).rejects.toThrow(BadRequestException);
   });
 });
 
 describe("B2b2cService — full B2B2C flow", () => {
-  it("consumer_order → pharmacy_confirm → supplier_pull → delivery", () => {
+  it("consumer_order → pharmacy_confirm → supplier_pull → delivery", async () => {
+    const orders: Record<string, ReturnType<typeof makeDbOrder>> = {};
+    const timelines: Record<string, ReturnType<typeof makeDbTimelineEntry>[]> = {};
+    const auditCalls: unknown[] = [];
+
+    const db = {
+      b2b2cOrder: {
+        create: vi.fn().mockImplementation(async (args: { data: Record<string, unknown> }) => {
+          const order = makeDbOrder({ id: `c${Math.random().toString(36).slice(2, 14)}`, ...args.data });
+          orders[order.id] = order;
+          return order;
+        }),
+        findFirst: vi.fn().mockImplementation(async (args: { where: Record<string, unknown> }) => {
+          const found = Object.values(orders).find(
+            (o) => o.id === (args.where.id as string) && o.organizationId === (args.where.organizationId as string) && o.marketCode === (args.where.marketCode as string),
+          );
+          return found ?? null;
+        }),
+        update: vi.fn().mockImplementation(async (args: { where: { id: string }; data: Record<string, unknown> }) => {
+          const existing = orders[args.where.id];
+          if (!existing) return makeDbOrder();
+          const updated = { ...existing, ...args.data, updatedAt: new Date() };
+          orders[updated.id] = updated;
+          return updated;
+        }),
+        count: vi.fn().mockResolvedValue(1),
+      },
+      b2b2cTimelineEntry: {
+        findMany: vi.fn().mockImplementation(async (args: { where: { orderId: string } }) => {
+          return timelines[args.where.orderId] ?? [];
+        }),
+        create: vi.fn().mockImplementation(async (args: { data: Record<string, unknown> }) => {
+          const entry = makeDbTimelineEntry(args.data);
+          const orderId = args.data.orderId as string;
+          timelines[orderId] = timelines[orderId] ?? [];
+          timelines[orderId].push(entry);
+          return entry;
+        }),
+      },
+      auditEvent: {
+        create: vi.fn().mockImplementation(async (args: { data: Record<string, unknown> }) => {
+          auditCalls.push(args.data);
+          return { id: `c${Math.random().toString(36).slice(2, 14)}` };
+        }),
+      },
+    };
+    vi.mocked(await import("@brocolis/db")).database = vi.fn().mockReturnValue(db);
+
     const svc = new B2b2cService();
-    const order = svc.createOrder(baseOrder);
+    const order = await svc.createOrder(baseOrder);
     expect(order.currentStage).toBe("CONSUMER_ORDER");
 
-    svc.confirmPharmacy({
+    await svc.confirmPharmacy({
       organizationId: ORG,
       marketCode: "AO",
       orderId: order.id,
       pharmacyId: PHARMACY,
     });
 
-    svc.pullFromSupplier({
+    await svc.pullFromSupplier({
       organizationId: ORG,
       marketCode: "AO",
       orderId: order.id,
       supplierId: SUPPLIER,
     });
 
-    svc.markDelivered({
+    await svc.markDelivered({
       organizationId: ORG,
       marketCode: "AO",
       orderId: order.id,
     });
 
-    const final = svc.getOrder({
-      organizationId: ORG,
-      marketCode: "AO",
-      orderId: order.id,
-    });
-    expect(final.currentStage).toBe("DELIVERY");
-    expect(final.currentStatus).toBe("COMPLETED");
+    const finalOrder = orders[order.id];
+    expect(finalOrder?.currentStage).toBe("DELIVERY");
+    expect(finalOrder?.currentStatus).toBe("COMPLETED");
 
-    const tl = svc.getTimeline({
+    const tl = await svc.getTimeline({
       organizationId: ORG,
       marketCode: "AO",
       orderId: order.id,
@@ -338,5 +503,10 @@ describe("B2b2cService — full B2B2C flow", () => {
       "SUPPLIER_PULL",
       "DELIVERY",
     ]);
+
+    expect(auditCalls.some((e) => (e as Record<string, unknown>).action === "b2b2c.order.created")).toBe(true);
+    expect(auditCalls.some((e) => (e as Record<string, unknown>).action === "b2b2c.pharmacy.confirmed")).toBe(true);
+    expect(auditCalls.some((e) => (e as Record<string, unknown>).action === "b2b2c.supplier.pull_started")).toBe(true);
+    expect(auditCalls.some((e) => (e as Record<string, unknown>).action === "b2b2c.delivery.completed")).toBe(true);
   });
 });

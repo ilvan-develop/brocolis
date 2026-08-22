@@ -976,6 +976,31 @@ enum SaftExportStatus {
   FAILED
 }
 
+enum B2b2cFlowStage {
+  CONSUMER_ORDER
+  PHARMACY_CONFIRMATION
+  SUPPLIER_PULL
+  DELIVERY
+}
+
+enum B2b2cFlowStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  DELAYED
+}
+
+enum B2b2cPartyType {
+  PHARMACY
+  SUPPLIER
+  PLATFORM
+}
+
+enum B2b2cStockSource {
+  PHARMACY_STOCK
+  SUPPLIER_PULL
+}
+
 model HealthcareProfessional {
   id                   String                       @id @default(cuid())
   organizationId       String
@@ -1083,6 +1108,45 @@ model SaftExportJob {
 
   @@index([organizationId, marketCode, status, createdAt])
   @@map("saft_export_jobs")
+}
+
+model B2b2cOrder {
+  id             String          @id @default(cuid())
+  organizationId String
+  marketCode     String
+  customerId     String?
+  pharmacyId     String
+  supplierId     String?
+  currentStage   B2b2cFlowStage
+  currentStatus  B2b2cFlowStatus
+  stockSource    B2b2cStockSource @default(PHARMACY_STOCK)
+  items          Json
+  totalMinor     Int
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  timeline       B2b2cTimelineEntry[]
+
+  @@index([organizationId, marketCode, currentStage, createdAt])
+  @@index([pharmacyId, createdAt])
+  @@map("b2b2c_orders")
+}
+
+model B2b2cTimelineEntry {
+  id               String        @id @default(cuid())
+  orderId          String
+  stage            B2b2cFlowStage
+  status           B2b2cFlowStatus
+  responsibleParty B2b2cPartyType
+  responsibleId    String
+  stockSource      B2b2cStockSource?
+  note             String?
+  createdAt        DateTime      @default(now())
+
+  order B2b2cOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+  @@map("b2b2c_timeline_entries")
 }
 
 // ─────────────────────────────────────────────────────────────────────────
