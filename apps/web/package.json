@@ -17,7 +17,6 @@
     "@brocolis/i18n": "workspace:*",
     "@brocolis/markets": "workspace:*",
     "@brocolis/ui": "workspace:*",
-    "@sentry/nextjs": "catalog:",
     "@tanstack/react-query": "catalog:",
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",
@@ -31,6 +30,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
+    "@sentry/nextjs": "catalog:",
     "@tailwindcss/postcss": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",

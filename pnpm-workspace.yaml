@@ -23,7 +23,7 @@ catalog:
   "@prisma/adapter-pg": "^7.9.1"
   "@prisma/client": "^7.9.1"
   "@sentry/nestjs": "^10.0.0"
-  "@sentry/nextjs": "^10.0.0"
+  "@sentry/nextjs": "^10.70.0"
   "@shopify/flash-list": "^1.7.0"
   "@tanstack/react-query": "^5.101.0"
   "@tanstack/react-query-persist-client": "^5.101.0"
@@ -97,6 +97,10 @@ catalog:
   "zod": "^4.4.3"
   "zustand": "^5.0.0"
   '@types/jest': ^30.0.0
+  '@opentelemetry/sdk-node': ^0.221.0
+  '@opentelemetry/sdk-trace-node': ^2.10.0
+  '@opentelemetry/instrumentation-http': ^0.221.0
+  '@opentelemetry/instrumentation-express': ^0.69.0
 
 allowBuilds:
   "@nestjs/core": true
@@ -107,6 +111,7 @@ allowBuilds:
   better-sqlite3: true
   esbuild: true
   prisma: true
+  protobufjs: set this to true or false
   sharp: true
 
 overrides:

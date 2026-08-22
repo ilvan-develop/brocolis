@@ -36,6 +36,10 @@
   "devDependencies": {
     "@biomejs/biome": "catalog:",
     "@nestjs/testing": "^11.1.24",
+    "@opentelemetry/instrumentation-express": "catalog:",
+    "@opentelemetry/instrumentation-http": "catalog:",
+    "@opentelemetry/sdk-node": "catalog:",
+    "@opentelemetry/sdk-trace-node": "catalog:",
     "@types/express": "^5.0.0",
     "@types/node": "catalog:",
     "tsx": "catalog:",

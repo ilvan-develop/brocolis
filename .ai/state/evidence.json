@@ -133,7 +133,28 @@
         "F6 web (feat/f6-web-ui): páginas /network, /compliance, /audit, /prescriptions.",
         "F7 hardening (feat/f7-hardening-release): OTel, Sentry, EAS, Lighthouse CI, IaC."
       ]
+    },
+    "13F4-F6-INTEGRATION": {
+      "date": "2026-08-22",
+      "category": "implementation",
+      "block": "F4-F6-INTEGRATION",
+      "evidence": [
+        "F4 web integrado: páginas /portal/supplier, /portal/supplier/[id], /portal/business/rfq, /portal/business/purchase-orders.",
+        "F6 backend integrado: b2b2c.service.ts e compliance.service.ts migrados para Prisma, saft-export.service.ts criado, schema.prisma atualizado.",
+        "F6 web integrado: páginas /dashboard/network, /dashboard/compliance, /dashboard/audit, /dashboard/prescriptions com meta.ts.",
+        "Gates: typecheck OK (api, web, mobile, packages). test:unit api: 190 passed, 42 failed (falhas em testes de procurement/prescription/compliance/b2b2c por mudanças async em services)."
+      ]
+    },
+    "14F7-IMPLEMENTATION": {
+      "date": "2026-08-22",
+      "category": "implementation",
+      "block": "F7-HARDENING",
+      "evidence": [
+        "F7 hardening NÃO implementado pelos agentes.",
+        "Criado vitest.config.ts e test-setup.ts no api para mock global de @brocolis/db.",
+        "Pendente: OTel, Sentry, EAS, Lighthouse CI, IaC."
+      ]
     }
   },
-  "updatedAt": "2026-08-22T13:00:00.000Z"
+  "updatedAt": "2026-08-22T14:55:00.000Z"
 }
