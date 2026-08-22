@@ -110,11 +110,14 @@ export class QuotationService {
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
-  advanceStatus(quotationId: string, to: QuotationStatus): QuotationRecord {
-    const qt = this.quotations.get(quotationId);
-    if (!qt) {
-      throw new NotFoundException(`Cotação ${quotationId} não encontrada`);
-    }
+  /** Scoped por organizationId+marketCode (regra 3) — ver RfqService.advanceStatus. */
+  advanceStatus(
+    organizationId: string,
+    marketCode: string,
+    quotationId: string,
+    to: QuotationStatus,
+  ): QuotationRecord {
+    const qt = this.getById(organizationId, marketCode, quotationId);
     const from = qt.status;
     const allowed = QT_TRANSITIONS[from];
     if (!allowed?.includes(to)) {

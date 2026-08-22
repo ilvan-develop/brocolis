@@ -280,3 +280,112 @@ export const listPurchaseOrdersInputSchema = z.object({
 export type ListPurchaseOrdersInput = z.infer<
   typeof listPurchaseOrdersInputSchema
 >;
+
+// ─────────────────────────────────────────────────────────────────────────
+// Orquestração do fluxo RFQ → Quotation → PO → Approval → Credit → Invoice
+// (F4 — scoping organizationId + marketCode obrigatório em toda mutação)
+// ─────────────────────────────────────────────────────────────────────────
+
+export const submitRfqInputSchema = z.object({
+  organizationId: organizationIdSchema,
+  marketCode: marketCodeSchema,
+  rfqId: z.string().cuid(),
+});
+
+export type SubmitRfqInput = z.infer<typeof submitRfqInputSchema>;
+
+export const submitQuotationInputSchema = z.object({
+  organizationId: organizationIdSchema,
+  marketCode: marketCodeSchema,
+  quotationId: z.string().cuid(),
+});
+
+export type SubmitQuotationInput = z.infer<typeof submitQuotationInputSchema>;
+
+export const acceptQuotationInputSchema = z.object({
+  organizationId: organizationIdSchema,
+  marketCode: marketCodeSchema,
+  quotationId: z.string().cuid(),
+});
+
+export type AcceptQuotationInput = z.infer<typeof acceptQuotationInputSchema>;
+
+export const rejectQuotationInputSchema = z.object({
+  organizationId: organizationIdSchema,
+  marketCode: marketCodeSchema,
+  quotationId: z.string().cuid(),
+  notes: z.string().max(500).optional(),
+});
+
+export type RejectQuotationInput = z.infer<typeof rejectQuotationInputSchema>;
+
+export const submitForApprovalInputSchema = z.object({
+  organizationId: organizationIdSchema,
+  marketCode: marketCodeSchema,
+  poId: z.string().cuid(),
+  approverIds: z.array(z.string().min(1)).min(1).max(10),
+});
+
+export type SubmitForApprovalInput = z.infer<
+  typeof submitForApprovalInputSchema
+>;
+
+export const confirmPurchaseOrderInputSchema = z.object({
+  organizationId: organizationIdSchema,
+  marketCode: marketCodeSchema,
+  poId: z.string().cuid(),
+});
+
+export type ConfirmPurchaseOrderInput = z.infer<
+  typeof confirmPurchaseOrderInputSchema
+>;
+
+export const advanceDeliveryStatusEnumSchema = z.enum([
+  "IN_DELIVERY",
+  "DELIVERED",
+  "COMPLETED",
+]);
+
+export const advancePoDeliveryInputSchema = z.object({
+  organizationId: organizationIdSchema,
+  marketCode: marketCodeSchema,
+  poId: z.string().cuid(),
+  to: advanceDeliveryStatusEnumSchema,
+});
+
+export type AdvancePoDeliveryInput = z.infer<
+  typeof advancePoDeliveryInputSchema
+>;
+
+// ─────────────────────────────────────────────────────────────────────────
+// Faturação B2B (export AGT/SAF-T delegado ao ComplianceService, type=PURCHASES)
+// ─────────────────────────────────────────────────────────────────────────
+
+export const invoiceStatusEnumSchema = z.enum(["ISSUED", "PAID", "CANCELED"]);
+
+export type InvoiceStatus = z.infer<typeof invoiceStatusEnumSchema>;
+
+export const issueInvoiceInputSchema = z.object({
+  organizationId: organizationIdSchema,
+  marketCode: marketCodeSchema,
+  purchaseOrderId: z.string().cuid(),
+});
+
+export type IssueInvoiceInput = z.infer<typeof issueInvoiceInputSchema>;
+
+export const invoiceSchema = z.object({
+  id: z.string().cuid(),
+  organizationId: organizationIdSchema,
+  marketCode: marketCodeSchema,
+  purchaseOrderId: z.string().cuid(),
+  supplierId: z.string().cuid(),
+  invoiceNumber: z.string().min(1).max(50),
+  totalAmountMinor: z.number().int().nonnegative(),
+  currency: z.string().length(3),
+  status: invoiceStatusEnumSchema,
+  issuedAt: z.date(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export type Invoice = z.infer<typeof invoiceSchema>;

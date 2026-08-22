@@ -1,18 +1,27 @@
 import { describe, expect, it } from "vitest";
 import {
+  acceptQuotationInputSchema,
+  advancePoDeliveryInputSchema,
   approvalStatusEnumSchema,
+  confirmPurchaseOrderInputSchema,
   createPurchaseOrderInputSchema,
   createQuotationInputSchema,
   createRfqInputSchema,
   createSupplierInputSchema,
   decideApprovalInputSchema,
+  invoiceSchema,
+  issueInvoiceInputSchema,
   listPurchaseOrdersInputSchema,
   listRfqsInputSchema,
   poStatusEnumSchema,
   purchaseOrderSchema,
   quotationSchema,
+  rejectQuotationInputSchema,
   rfqSchema,
   rfqStatusEnumSchema,
+  submitForApprovalInputSchema,
+  submitQuotationInputSchema,
+  submitRfqInputSchema,
   supplierSchema,
 } from "./procurement.js";
 
@@ -276,5 +285,117 @@ describe("list input schemas", () => {
     });
     expect(parsed.page).toBe(2);
     expect(parsed.status).toBe("APPROVED");
+  });
+});
+
+describe("orchestration input schemas (scoped org+market)", () => {
+  it("validates submitRfqInput", () => {
+    const parsed = submitRfqInputSchema.parse({
+      organizationId: uuid,
+      marketCode: "AO",
+      rfqId: cuid,
+    });
+    expect(parsed.rfqId).toBe(cuid);
+  });
+
+  it("validates submitQuotationInput", () => {
+    const parsed = submitQuotationInputSchema.parse({
+      organizationId: uuid,
+      marketCode: "AO",
+      quotationId: cuid,
+    });
+    expect(parsed.quotationId).toBe(cuid);
+  });
+
+  it("validates acceptQuotationInput and rejectQuotationInput", () => {
+    expect(
+      acceptQuotationInputSchema.parse({
+        organizationId: uuid,
+        marketCode: "AO",
+        quotationId: cuid,
+      }).quotationId,
+    ).toBe(cuid);
+    expect(
+      rejectQuotationInputSchema.parse({
+        organizationId: uuid,
+        marketCode: "AO",
+        quotationId: cuid,
+        notes: "Preço acima do mercado",
+      }).notes,
+    ).toBe("Preço acima do mercado");
+  });
+
+  it("validates submitForApprovalInput requires at least one approver", () => {
+    const parsed = submitForApprovalInputSchema.parse({
+      organizationId: uuid,
+      marketCode: "AO",
+      poId: cuid,
+      approverIds: ["user-1", "user-2"],
+    });
+    expect(parsed.approverIds).toHaveLength(2);
+    expect(() =>
+      submitForApprovalInputSchema.parse({
+        organizationId: uuid,
+        marketCode: "AO",
+        poId: cuid,
+        approverIds: [],
+      }),
+    ).toThrow();
+  });
+
+  it("validates confirmPurchaseOrderInput", () => {
+    const parsed = confirmPurchaseOrderInputSchema.parse({
+      organizationId: uuid,
+      marketCode: "AO",
+      poId: cuid,
+    });
+    expect(parsed.poId).toBe(cuid);
+  });
+
+  it("validates advancePoDeliveryInput accepts only delivery statuses", () => {
+    const parsed = advancePoDeliveryInputSchema.parse({
+      organizationId: uuid,
+      marketCode: "AO",
+      poId: cuid,
+      to: "DELIVERED",
+    });
+    expect(parsed.to).toBe("DELIVERED");
+    expect(() =>
+      advancePoDeliveryInputSchema.parse({
+        organizationId: uuid,
+        marketCode: "AO",
+        poId: cuid,
+        to: "DRAFT",
+      }),
+    ).toThrow();
+  });
+});
+
+describe("invoice schemas", () => {
+  it("validates issueInvoiceInput", () => {
+    const parsed = issueInvoiceInputSchema.parse({
+      organizationId: uuid,
+      marketCode: "AO",
+      purchaseOrderId: cuid,
+    });
+    expect(parsed.purchaseOrderId).toBe(cuid);
+  });
+
+  it("validates invoiceSchema", () => {
+    const parsed = invoiceSchema.parse({
+      id: cuid,
+      organizationId: uuid,
+      marketCode: "AO",
+      purchaseOrderId: cuid2,
+      supplierId: cuid3,
+      invoiceNumber: "INV-001",
+      totalAmountMinor: 100000,
+      currency: "AOA",
+      status: "ISSUED",
+      issuedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    expect(parsed.status).toBe("ISSUED");
   });
 });

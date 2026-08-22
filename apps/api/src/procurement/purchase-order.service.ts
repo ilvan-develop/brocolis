@@ -146,11 +146,14 @@ export class PurchaseOrderService {
     };
   }
 
-  advanceStatus(poId: string, to: PoStatus): PurchaseOrderRecord {
-    const po = this.orders.get(poId);
-    if (!po) {
-      throw new NotFoundException(`Purchase Order ${poId} não encontrado`);
-    }
+  /** Scoped por organizationId+marketCode (regra 3) — ver RfqService.advanceStatus. */
+  advanceStatus(
+    organizationId: string,
+    marketCode: string,
+    poId: string,
+    to: PoStatus,
+  ): PurchaseOrderRecord {
+    const po = this.getById(organizationId, marketCode, poId);
     const from = po.status;
     const allowed = PO_TRANSITIONS[from];
     if (!allowed?.includes(to)) {

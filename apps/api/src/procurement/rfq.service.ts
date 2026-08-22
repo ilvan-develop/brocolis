@@ -112,11 +112,18 @@ export class RfqService {
     };
   }
 
-  advanceStatus(rfqId: string, to: RfqStatus): RfqRecord {
-    const rfq = this.rfqs.get(rfqId);
-    if (!rfq) {
-      throw new NotFoundException(`RFQ ${rfqId} não encontrado`);
-    }
+  /**
+   * Scoped por organizationId+marketCode (regra 3) — usa getById para que
+   * uma tentativa cross-tenant resulte em 404, nunca num 400 que confirme
+   * a existência do recurso noutra organização.
+   */
+  advanceStatus(
+    organizationId: string,
+    marketCode: string,
+    rfqId: string,
+    to: RfqStatus,
+  ): RfqRecord {
+    const rfq = this.getById(organizationId, marketCode, rfqId);
     const from = rfq.status;
     const allowed = RFQ_TRANSITIONS[from];
     if (!allowed?.includes(to)) {
