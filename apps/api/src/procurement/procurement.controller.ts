@@ -65,8 +65,7 @@ export class ProcurementController {
 
   @Get("purchase-order")
   listPurchaseOrders(
-    @Query()
-    query: {
+    @Query() query: {
       organizationId: string;
       marketCode: string;
       status?: string;
@@ -75,13 +74,17 @@ export class ProcurementController {
       pageSize?: string;
     },
   ) {
+    const filters: { status?: string; supplierId?: string } = {};
+    if (query.status) {
+      filters.status = query.status;
+    }
+    if (query.supplierId) {
+      filters.supplierId = query.supplierId;
+    }
     return this.procurement.listPurchaseOrders(
       query.organizationId,
       query.marketCode,
-      {
-        ...(query.status ? { status: query.status } : {}),
-        ...(query.supplierId ? { supplierId: query.supplierId } : {}),
-      },
+      filters,
       query.page !== undefined ? Number(query.page) : undefined,
       query.pageSize !== undefined ? Number(query.pageSize) : undefined,
     );

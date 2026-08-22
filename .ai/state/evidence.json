@@ -73,9 +73,24 @@
         "Governança: regra dependency-cruiser no-cross-app-imports estava partida (backreference \\1 sem grupo de captura — nunca excluía imports dentro da mesma app, gerando falsos positivos); scripts/fitness-check.mjs usava grep+2>/dev/null incompatível com cmd.exe no Windows — reescrito com scan Node nativo; madge crashava sob TS7 (agora corre e exclui packages/*/src/generated/prisma, que tem ciclos legítimos gerados pelo Prisma).",
         "graphify-health.mjs: hub 'cn()' era ambíguo entre apps/mobile e packages/ui (2 nós com o mesmo label) — explain/affected corrigidos para usar o id único do nó, não o label.",
         "Resultado final, verificado num único run consecutivo: pnpm lint && pnpm typecheck && pnpm test:unit (238/238 testes, 24/24 ficheiros) && pnpm build (15/15 pacotes/apps) && node scripts/fitness-check.mjs (6/6, 0 avisos) — todos verdes. graphify HEALTHY. MVP_V1.status = done.",
-        "Descoberta lateral: apps/api, apps/web e packages/contracts já contêm código substancial de F4 (Procurement B2B) não registado em current.json — passa nos gates mas o ciclo completo da fase (docs/ADR/E2E/evidência) não foi auditado; marcado current=F4/in_progress, não completed."
+        "Descoberta lateral: apps/api, apps/web e packages/contracts já contêm código substancial de F4 (Procurement B2B) não registado em current.json — passa nos gates mas o ciclo completo da fase (docs/ADR/E2E/evidência) não foi auditado; marcado current=F4/in_progress, não completed.",
+        "Delegação paralela F4–F7: 6 agentes locais isolados criados via Agent Manager para implementar em simultâneo: F4-backend (Prisma migration), F4-web (Supplier+B2B UIs), F5-mobile (testes+features), F6-backend (Prisma migration), F6-web (Network+Compliance UIs), F7-hardening (OTel+Sentry+EAS+IaC)."
+      ]
+    },
+    "8PARALLEL-DELEGATION": {
+      "date": "2026-08-22",
+      "category": "implementation",
+      "block": "F4-F7-PARALLEL",
+      "evidence": [
+        "6 agentes paralelos delegados em modo local via agent_manager para trabalhar em fases isoladas sem colidir em ficheiros partilhados.",
+        "F4-backend: migração de procurement services de in-memory para Prisma.",
+        "F4-web: data fetching real + formulários para Supplier Portal + Business Portal.",
+        "F5-mobile: testes unitários + push notifications + Better Auth expo + sync offline + telas B2B.",
+        "F6-backend: migração de B2B2C/compliance/prescription-digital para Prisma + SAF-T export real.",
+        "F6-web: network timeline + compliance UI + audit explorer + e-prescription workflow.",
+        "F7-hardening: OpenTelemetry + Sentry web/mobile + EAS config + Lighthouse CI + IaC + bundle analyzers."
       ]
     }
   },
-  "updatedAt": "2026-08-22T10:45:00.000Z"
+  "updatedAt": "2026-08-22T10:55:00.000Z"
 }

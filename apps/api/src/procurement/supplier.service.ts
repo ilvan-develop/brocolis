@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { nextCuid } from "../cuid.js";
+import { database } from "@brocolis/db";
 
 export type SupplierRecord = {
   id: string;
@@ -26,25 +26,19 @@ export type CreateSupplierInput = {
 
 @Injectable()
 export class SupplierService {
-  private readonly suppliers = new Map<string, SupplierRecord>();
-
   create(input: CreateSupplierInput): SupplierRecord {
-    const id = nextCuid();
-    const now = new Date();
-    const record: SupplierRecord = {
-      id,
-      organizationId: input.organizationId,
-      marketCode: input.marketCode,
-      name: input.name,
-      slug: input.slug,
-      status: "ACTIVE",
-      createdAt: now,
-      updatedAt: now,
-      ...(input.contactEmail ? { contactEmail: input.contactEmail } : {}),
-      ...(input.contactPhone ? { contactPhone: input.contactPhone } : {}),
-    };
-    this.suppliers.set(id, record);
-    return record;
+    const record = database().supplier.create({
+      data: {
+        organizationId: input.organizationId,
+        marketCode: input.marketCode,
+        name: input.name,
+        slug: input.slug,
+        status: "ACTIVE",
+        contactEmail: input.contactEmail,
+        contactPhone: input.contactPhone,
+      },
+    });
+    return record as SupplierRecord;
   }
 
   getById(
@@ -52,38 +46,38 @@ export class SupplierService {
     marketCode: string,
     supplierId: string,
   ): SupplierRecord {
-    const supplier = this.suppliers.get(supplierId);
-    if (
-      !supplier ||
-      supplier.organizationId !== organizationId ||
-      supplier.marketCode !== marketCode
-    ) {
+    const supplier = database().supplier.findUnique({
+      where: { id: supplierId, organizationId, marketCode },
+    });
+    if (!supplier) {
       throw new NotFoundException(`Fornecedor ${supplierId} não encontrado`);
     }
-    return supplier;
+    return supplier as SupplierRecord;
   }
 
-  listByOrg(
+  async listByOrg(
     organizationId: string,
     marketCode: string,
     page = 1,
     pageSize = 20,
-  ): {
+  ): Promise<{
     items: SupplierRecord[];
     total: number;
     page: number;
     pageSize: number;
-  } {
-    const filtered = [...this.suppliers.values()]
-      .filter(
-        (s) =>
-          s.organizationId === organizationId && s.marketCode === marketCode,
-      )
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    const total = filtered.length;
-    const start = (page - 1) * pageSize;
+  }> {
+    const where = { organizationId, marketCode };
+    const [items, total] = await Promise.all([
+      database().supplier.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      database().supplier.count({ where }),
+    ]);
     return {
-      items: filtered.slice(start, start + pageSize),
+      items: items as SupplierRecord[],
       total,
       page,
       pageSize,

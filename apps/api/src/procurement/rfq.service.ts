@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { nextCuid } from "../cuid.js";
+import { database } from "@brocolis/db";
 
 export type RfqRecord = {
   id: string;
@@ -46,86 +46,94 @@ const RFQ_TRANSITIONS: Partial<Record<RfqStatus, RfqStatus[]>> = {
 
 @Injectable()
 export class RfqService {
-  private readonly rfqs = new Map<string, RfqRecord>();
-
-  create(input: CreateRfqInput): RfqRecord {
-    const id = nextCuid();
+  async create(input: CreateRfqInput): Promise<RfqRecord> {
+    const id = `c${Date.now().toString(36).padStart(12, "0")}`;
     const ref = `RFQ-${Date.now().toString(36).toUpperCase()}`;
     const now = new Date();
-    const record: RfqRecord = {
-      id,
-      organizationId: input.organizationId,
-      marketCode: input.marketCode,
-      supplierId: input.supplierId,
-      reference: ref,
-      subject: input.subject,
-      status: "DRAFT",
-      createdAt: now,
-      updatedAt: now,
-      ...(input.validUntil ? { validUntil: input.validUntil } : {}),
-      ...(input.notes ? { notes: input.notes } : {}),
-    };
-    this.rfqs.set(id, record);
-    return record;
+    const record = await database().rfq.create({
+      data: {
+        id,
+        organizationId: input.organizationId,
+        marketCode: input.marketCode,
+        supplierId: input.supplierId,
+        reference: ref,
+        subject: input.subject,
+        status: "DRAFT",
+        validUntil: input.validUntil,
+        notes: input.notes,
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+    return {
+      ...record,
+      validUntil: record.validUntil ?? undefined,
+      notes: record.notes ?? undefined,
+    } as RfqRecord;
   }
 
-  getById(
+  async getById(
     organizationId: string,
     marketCode: string,
     rfqId: string,
-  ): RfqRecord {
-    const rfq = this.rfqs.get(rfqId);
-    if (
-      !rfq ||
-      rfq.organizationId !== organizationId ||
-      rfq.marketCode !== marketCode
-    ) {
+  ): Promise<RfqRecord> {
+    const rfq = await database().rfq.findUnique({
+      where: { id: rfqId, organizationId, marketCode },
+    });
+    if (!rfq) {
       throw new NotFoundException(`RFQ ${rfqId} não encontrado`);
     }
-    return rfq;
+    return rfq as RfqRecord;
   }
 
-  listByOrg(input: ListRfqsInput): {
+  async listByOrg(input: ListRfqsInput): Promise<{
     items: RfqRecord[];
     total: number;
     page: number;
     pageSize: number;
-  } {
+  }> {
     const page = input.page ?? 1;
     const pageSize = input.pageSize ?? 20;
-    let filtered = [...this.rfqs.values()].filter(
-      (r) =>
-        r.organizationId === input.organizationId &&
-        r.marketCode === input.marketCode,
-    );
+    const where: Record<string, unknown> = {
+      organizationId: input.organizationId,
+      marketCode: input.marketCode,
+    };
     if (input.status) {
-      filtered = filtered.filter((r) => r.status === input.status);
+      where.status = input.status;
     }
-    filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    const total = filtered.length;
-    const start = (page - 1) * pageSize;
+    const [items, total] = await Promise.all([
+      database().rfq.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      database().rfq.count({ where }),
+    ]);
     return {
-      items: filtered.slice(start, start + pageSize),
+      items: items as RfqRecord[],
       total,
       page,
       pageSize,
     };
   }
 
-  advanceStatus(rfqId: string, to: RfqStatus): RfqRecord {
-    const rfq = this.rfqs.get(rfqId);
+  async advanceStatus(rfqId: string, to: RfqStatus): Promise<RfqRecord> {
+    const rfq = await database().rfq.findUnique({ where: { id: rfqId } });
     if (!rfq) {
       throw new NotFoundException(`RFQ ${rfqId} não encontrado`);
     }
-    const from = rfq.status;
+    const from = rfq.status as RfqStatus;
     const allowed = RFQ_TRANSITIONS[from];
     if (!allowed?.includes(to)) {
       throw new BadRequestException(
         `Transição de estado inválida: ${from} → ${to}`,
       );
     }
-    rfq.status = to;
-    rfq.updatedAt = new Date();
-    return rfq;
+    const updated = await database().rfq.update({
+      where: { id: rfqId },
+      data: { status: to, updatedAt: new Date() },
+    });
+    return updated as RfqRecord;
   }
 }

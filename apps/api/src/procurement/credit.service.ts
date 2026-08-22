@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { nextCuid } from "../cuid.js";
+import { database } from "@brocolis/db";
 
 export type CreditAccountRecord = {
   id: string;
@@ -35,33 +35,25 @@ export type CheckCreditInput = {
 
 @Injectable()
 export class CreditService {
-  private readonly accounts = new Map<string, CreditAccountRecord>();
-  private readonly byOrgSupplier = new Map<string, string>();
-
   create(input: CreateCreditAccountInput): CreditAccountRecord {
-    const key = `${input.organizationId}:${input.supplierId}`;
-    const existing = this.byOrgSupplier.get(key);
+    const existing = database().creditAccount.findFirst({
+      where: { organizationId: input.organizationId, supplierId: input.supplierId },
+    });
     if (existing) {
-      const acc = this.accounts.get(existing);
-      if (acc) return acc;
+      return existing as CreditAccountRecord;
     }
-    const id = nextCuid();
-    const now = new Date();
-    const record: CreditAccountRecord = {
-      id,
-      organizationId: input.organizationId,
-      marketCode: input.marketCode,
-      supplierId: input.supplierId,
-      creditLimitMinor: input.creditLimitMinor,
-      balanceMinor: 0,
-      currency: input.currency ?? "AOA",
-      status: "ACTIVE",
-      createdAt: now,
-      updatedAt: now,
-    };
-    this.accounts.set(id, record);
-    this.byOrgSupplier.set(key, id);
-    return record;
+    const record = database().creditAccount.create({
+      data: {
+        organizationId: input.organizationId,
+        marketCode: input.marketCode,
+        supplierId: input.supplierId,
+        creditLimitMinor: input.creditLimitMinor,
+        balanceMinor: 0,
+        currency: input.currency ?? "AOA",
+        status: "ACTIVE",
+      },
+    });
+    return record as CreditAccountRecord;
   }
 
   check(input: CheckCreditInput): {
@@ -70,16 +62,13 @@ export class CreditService {
     balanceMinor: number;
     requestedMinor: number;
   } {
-    const key = `${input.organizationId}:${input.supplierId}`;
-    const accountId = this.byOrgSupplier.get(key);
-    if (!accountId) {
+    const account = database().creditAccount.findFirst({
+      where: { organizationId: input.organizationId, supplierId: input.supplierId },
+    });
+    if (!account) {
       throw new NotFoundException(
         `Conta de crédito não encontrada para fornecedor ${input.supplierId}`,
       );
-    }
-    const account = this.accounts.get(accountId);
-    if (!account) {
-      throw new NotFoundException("Conta de crédito não encontrada");
     }
     if (account.status !== "ACTIVE") {
       return {
@@ -104,12 +93,9 @@ export class CreditService {
     supplierId: string,
     amountMinor: number,
   ): CreditAccountRecord {
-    const key = `${organizationId}:${supplierId}`;
-    const accountId = this.byOrgSupplier.get(key);
-    if (!accountId) {
-      throw new NotFoundException("Conta de crédito não encontrada");
-    }
-    const account = this.accounts.get(accountId);
+    const account = database().creditAccount.findFirst({
+      where: { organizationId, supplierId },
+    });
     if (!account) {
       throw new NotFoundException("Conta de crédito não encontrada");
     }
@@ -119,9 +105,11 @@ export class CreditService {
     if (account.balanceMinor + amountMinor > account.creditLimitMinor) {
       throw new BadRequestException("Limite de crédito excedido");
     }
-    account.balanceMinor += amountMinor;
-    account.updatedAt = new Date();
-    return account;
+    const updated = database().creditAccount.update({
+      where: { id: account.id },
+      data: { balanceMinor: account.balanceMinor + amountMinor, updatedAt: new Date() },
+    });
+    return updated as CreditAccountRecord;
   }
 
   credit(
@@ -129,27 +117,26 @@ export class CreditService {
     supplierId: string,
     amountMinor: number,
   ): CreditAccountRecord {
-    const key = `${organizationId}:${supplierId}`;
-    const accountId = this.byOrgSupplier.get(key);
-    if (!accountId) {
-      throw new NotFoundException("Conta de crédito não encontrada");
-    }
-    const account = this.accounts.get(accountId);
+    const account = database().creditAccount.findFirst({
+      where: { organizationId, supplierId },
+    });
     if (!account) {
       throw new NotFoundException("Conta de crédito não encontrada");
     }
-    account.balanceMinor = Math.max(0, account.balanceMinor - amountMinor);
-    account.updatedAt = new Date();
-    return account;
+    const updated = database().creditAccount.update({
+      where: { id: account.id },
+      data: { balanceMinor: Math.max(0, account.balanceMinor - amountMinor), updatedAt: new Date() },
+    });
+    return updated as CreditAccountRecord;
   }
 
   getAccount(
     organizationId: string,
     supplierId: string,
   ): CreditAccountRecord | null {
-    const key = `${organizationId}:${supplierId}`;
-    const accountId = this.byOrgSupplier.get(key);
-    if (!accountId) return null;
-    return this.accounts.get(accountId) ?? null;
+    const account = database().creditAccount.findFirst({
+      where: { organizationId, supplierId },
+    });
+    return (account ?? null) as CreditAccountRecord | null;
   }
 }

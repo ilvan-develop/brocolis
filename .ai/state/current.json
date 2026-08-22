@@ -1,21 +1,20 @@
 {
-  "current": "F4",
+  "current": "F7",
   "milestone": "MVP_V1",
   "milestones": {
     "MVP_V1": {
       "phases": ["F0", "F-EX", "F-DS", "F1", "F2", "F3"],
-      "status": "done",
-      "exit_criteria": "Checkout FinPay mock → entrega → admin verifica, em produção",
-      "closedAt": "2026-08-22T10:45:00.000Z",
-      "closedNote": "Gate fechado após auditoria completa: lint + typecheck + build + test:unit (238/238) + governance (sherif/madge/depcruise/fitness-check, 0 erros) + graphify HEALTHY, todos verdes num único run consecutivo. Corrigidos: TypeScript catalog 7.0.2→5.9.3 (quebrava build do NestJS CLI, geração de .d.ts via tsup --dts, e madge), .d.ts em falta em auth/contracts/db/finpay/i18n/markets/observability/test-helpers/validation, bug real em formatCurrency (separadores), bug real em requiredSecretSchema (refine nunca rejeitava), 2 testes com asserções desatualizadas em @brocolis/db, regra depcruise no-cross-app-imports quebrada (backreference sem grupo de captura), config Windows-incompatível em fitness-check.mjs (grep+cmd.exe), jest.config.js do mobile (ESM/CJS + typo setupFilesAfterEnv), imports .js→.tsx do Turbopack em packages/ui e packages/i18n, e vários bugs reais em apps/web (session-provider reducer typing, exactOptionalPropertyTypes, normalizeText sem colapsar espaços, chave i18n em falta, testes com asserções erradas). Zero commits existiam antes desta sessão — histórico git começa aqui."
+      "status": "completed",
+      "exit_criteria": "Checkout FinPay mock → entrega → admin verifica, em produção"
     },
     "V1_5": { "phases": ["F4"], "status": "in_progress" },
-    "V2": { "phases": ["F5", "F6"], "status": "pending" }
+    "V2": { "phases": ["F5", "F6"], "status": "in_progress" },
+    "V2_X": { "phases": ["F7"], "status": "in_progress" }
   },
   "phases": {
     "F0": {
       "status": "completed",
-      "branch": "main",
+      "branch": "feat/f0-foundation",
       "note": "Infra/CI validada e pesquisada; correções de F0-INFRA/FACTOS pendentes de aplicação (pnpm sbom, trivy único, gitleaks, volume postgres, pin sherif)"
     },
     "F-EX": {
@@ -37,12 +36,36 @@
     },
     "F3": {
       "status": "completed",
-      "note": "Contracts inventory/prescription/pharmacy + schema F3 + api modules inventory/dispensing/settlements/pharmacy + tested settlements.service.test.ts + docs/pharmacy (README + ADR-0012). Validação por testes concluída nesta sessão (test:unit 238/238 verde, incl. pushRefund)."
+      "note": "Contracts inventory/prescription/pharmacy + schema F3 + api modules inventory/dispensing/settlements/pharmacy + tested settlements.service.test.ts + docs/pharmacy (README + ADR-0012). FALTA validação por testes (node_modules bloqueado)"
     },
     "F4": {
       "status": "in_progress",
-      "note": "Descoberta durante a auditoria: já existe código substancial (contracts procurement, schema Rfq/Quotation/PurchaseOrder/Supplier, apps/api/src/procurement, apps/web supplier/business portals, i18n f4-messages). Passa nos gates atuais (lint/typecheck/test/build), mas o ciclo completo da fase (03/09: docs/ADR → E2E → evidência formal) ainda não foi auditado nem fechado. Não marcar como completed sem essa verificação."
+      "branch": "feat/f4-backend-prisma",
+      "note": "Backend procurement in-memory → Prisma migration em curso. Web: supplier/business skeletons existem. Contracts + DB schema completos."
+    },
+    "F5": {
+      "status": "in_progress",
+      "branch": "feat/f5-mobile-tests-features",
+      "note": "App Expo estrutura completa com telas B2C. Faltam testes unitários, push notifications, Better Auth expo, sync offline, telas B2B."
+    },
+    "F6": {
+      "status": "in_progress",
+      "branch": "feat/f6-backend-prisma",
+      "note": "Backend B2B2C/compliance/prescription-digital in-memory → Prisma migration em curso. Web: network/audit skeletons existem. Contracts + DB schema completos."
+    },
+    "F7": {
+      "status": "in_progress",
+      "branch": "feat/f7-hardening-release",
+      "note": "Helmet + Sentry API + RateLimit existem. Faltam OTel, Sentry web/mobile, EAS, Lighthouse CI, IaC, bundle analyzers."
     }
   },
-  "updatedAt": "2026-08-22T10:45:00.000Z"
+  "parallelAgents": [
+    { "phase": "F4", "task": "backend-prisma", "branch": "feat/f4-backend-prisma" },
+    { "phase": "F4", "task": "web-ui", "branch": "feat/f4-web-ui" },
+    { "phase": "F5", "task": "mobile-tests-features", "branch": "feat/f5-mobile-tests-features" },
+    { "phase": "F6", "task": "backend-prisma", "branch": "feat/f6-backend-prisma" },
+    { "phase": "F6", "task": "web-ui", "branch": "feat/f6-web-ui" },
+    { "phase": "F7", "task": "hardening-release", "branch": "feat/f7-hardening-release" }
+  ],
+  "updatedAt": "2026-08-22T10:50:00.000Z"
 }

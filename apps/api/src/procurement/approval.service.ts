@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { nextCuid } from "../cuid.js";
+import { database } from "@brocolis/db";
 
 export type ApprovalRecord = {
   id: string;
@@ -26,44 +26,48 @@ export type DecideApprovalInput = {
 
 @Injectable()
 export class ApprovalService {
-  private readonly approvals = new Map<string, ApprovalRecord>();
-
   create(
     purchaseOrderId: string,
     approverId: string,
     level = 1,
   ): ApprovalRecord {
-    const id = nextCuid();
+    const id = `ap-${Date.now().toString(36).padStart(12, "0")}`;
     const now = new Date();
-    const record: ApprovalRecord = {
-      id,
-      purchaseOrderId,
-      approverId,
-      status: "PENDING",
-      level,
-      createdAt: now,
-      updatedAt: now,
-    };
-    this.approvals.set(id, record);
-    return record;
+    const record = database().approvalWorkflow.create({
+      data: {
+        id,
+        purchaseOrderId,
+        approverId,
+        status: "PENDING",
+        level,
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+    return record as ApprovalRecord;
   }
 
   getById(approvalId: string): ApprovalRecord {
-    const approval = this.approvals.get(approvalId);
+    const approval = database().approvalWorkflow.findUnique({
+      where: { id: approvalId },
+    });
     if (!approval) {
       throw new NotFoundException(`Aprovação ${approvalId} não encontrada`);
     }
-    return approval;
+    return approval as ApprovalRecord;
   }
 
   listByPurchaseOrder(purchaseOrderId: string): ApprovalRecord[] {
-    return [...this.approvals.values()]
-      .filter((a) => a.purchaseOrderId === purchaseOrderId)
-      .sort((a, b) => a.level - b.level);
+    return database().approvalWorkflow.findMany({
+      where: { purchaseOrderId },
+      orderBy: { level: "asc" },
+    }) as ApprovalRecord[];
   }
 
   decide(input: DecideApprovalInput): ApprovalRecord {
-    const approval = this.approvals.get(input.approvalId);
+    const approval = database().approvalWorkflow.findUnique({
+      where: { id: input.approvalId },
+    });
     if (!approval) {
       throw new NotFoundException(
         `Aprovação ${input.approvalId} não encontrada`,
@@ -77,13 +81,16 @@ export class ApprovalService {
     if (approval.approverId !== input.approverId) {
       throw new BadRequestException("Aprovador não autorizado");
     }
-    approval.status = input.decision;
-    approval.decidedAt = new Date();
-    approval.updatedAt = new Date();
-    if (input.notes) {
-      approval.notes = input.notes;
-    }
-    return approval;
+    const updated = database().approvalWorkflow.update({
+      where: { id: input.approvalId },
+      data: {
+        status: input.decision,
+        decidedAt: new Date(),
+        updatedAt: new Date(),
+        ...(input.notes ? { notes: input.notes } : {}),
+      },
+    });
+    return updated as ApprovalRecord;
   }
 
   hasApproval(purchaseOrderId: string): boolean {

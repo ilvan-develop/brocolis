@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { nextCuid } from "../cuid.js";
+import { database } from "@brocolis/db";
 
 export type PurchaseOrderItemRecord = {
   productId: string;
@@ -62,104 +62,179 @@ const PO_TRANSITIONS: Partial<Record<PoStatus, PoStatus[]>> = {
   DELIVERED: ["COMPLETED"],
 };
 
+type PoWithItems = {
+  id: string;
+  organizationId: string;
+  marketCode: string;
+  quotationId?: string;
+  supplierId: string;
+  reference: string;
+  status: string;
+  totalAmountMinor: number;
+  currency: string;
+  requestedDeliveryDate?: Date;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  items: {
+    productId: string;
+    quantity: number;
+    unitPriceMinor: number;
+    lineTotalMinor: number;
+    currency: string;
+  }[];
+};
+
 @Injectable()
 export class PurchaseOrderService {
-  private readonly orders = new Map<string, PurchaseOrderRecord>();
-
-  create(input: CreatePurchaseOrderInput): PurchaseOrderRecord {
-    const id = nextCuid();
+  async create(input: CreatePurchaseOrderInput): Promise<PurchaseOrderRecord> {
+    const id = `po-${Date.now().toString(36).padStart(12, "0")}`;
     const ref = `PO-${Date.now().toString(36).toUpperCase()}`;
     const now = new Date();
-    const record: PurchaseOrderRecord = {
-      id,
-      organizationId: input.organizationId,
-      marketCode: input.marketCode,
-      supplierId: input.supplierId,
-      reference: ref,
-      status: "DRAFT",
-      totalAmountMinor: input.totalAmountMinor,
-      currency: input.currency ?? "AOA",
-      items: input.items.map((i) => ({
+    const record = await database().purchaseOrder.create({
+      data: {
+        id,
+        organizationId: input.organizationId,
+        marketCode: input.marketCode,
+        supplierId: input.supplierId,
+        reference: ref,
+        status: "DRAFT",
+        totalAmountMinor: input.totalAmountMinor,
+        currency: input.currency ?? "AOA",
+        items: {
+          create: input.items.map((i) => ({
+            productId: i.productId,
+            quantity: i.quantity,
+            unitPriceMinor: i.unitPriceMinor,
+            lineTotalMinor: i.lineTotalMinor,
+            currency: i.currency,
+          })),
+        },
+        ...(input.quotationId ? { quotationId: input.quotationId } : {}),
+        ...(input.requestedDeliveryDate
+          ? { requestedDeliveryDate: input.requestedDeliveryDate }
+          : {}),
+        ...(input.notes ? { notes: input.notes } : {}),
+        createdAt: now,
+        updatedAt: now,
+      },
+      include: { items: true },
+    });
+    const po = record as PoWithItems;
+    return {
+      ...po,
+      items: po.items.map((i) => ({
         productId: i.productId,
         quantity: i.quantity,
         unitPriceMinor: i.unitPriceMinor,
         lineTotalMinor: i.lineTotalMinor,
         currency: i.currency,
       })),
-      createdAt: now,
-      updatedAt: now,
-      ...(input.quotationId ? { quotationId: input.quotationId } : {}),
-      ...(input.requestedDeliveryDate
-        ? { requestedDeliveryDate: input.requestedDeliveryDate }
-        : {}),
-      ...(input.notes ? { notes: input.notes } : {}),
-    };
-    this.orders.set(id, record);
-    return record;
+    } as PurchaseOrderRecord;
   }
 
-  getById(
+  async getById(
     organizationId: string,
     marketCode: string,
     poId: string,
-  ): PurchaseOrderRecord {
-    const po = this.orders.get(poId);
-    if (
-      !po ||
-      po.organizationId !== organizationId ||
-      po.marketCode !== marketCode
-    ) {
+  ): Promise<PurchaseOrderRecord> {
+    const po = await database().purchaseOrder.findUnique({
+      where: { id: poId, organizationId, marketCode },
+      include: { items: true },
+    });
+    if (!po) {
       throw new NotFoundException(`Purchase Order ${poId} não encontrado`);
     }
-    return po;
+    const p = po as PoWithItems;
+    return {
+      ...p,
+      items: p.items.map((i) => ({
+        productId: i.productId,
+        quantity: i.quantity,
+        unitPriceMinor: i.unitPriceMinor,
+        lineTotalMinor: i.lineTotalMinor,
+        currency: i.currency,
+      })),
+    } as PurchaseOrderRecord;
   }
 
-  listByOrg(
+  async listByOrg(
     organizationId: string,
     marketCode: string,
     filters?: { status?: PoStatus; supplierId?: string },
     page = 1,
     pageSize = 20,
-  ): {
+  ): Promise<{
     items: PurchaseOrderRecord[];
     total: number;
     page: number;
     pageSize: number;
-  } {
-    let filtered = [...this.orders.values()].filter(
-      (o) => o.organizationId === organizationId && o.marketCode === marketCode,
-    );
+  }> {
+    const where: Record<string, unknown> = {
+      organizationId,
+      marketCode,
+    };
     if (filters?.status) {
-      filtered = filtered.filter((o) => o.status === filters.status);
+      where.status = filters.status;
     }
     if (filters?.supplierId) {
-      filtered = filtered.filter((o) => o.supplierId === filters.supplierId);
+      where.supplierId = filters.supplierId;
     }
-    filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    const total = filtered.length;
-    const start = (page - 1) * pageSize;
+    const [rawItems, total] = await Promise.all([
+      database().purchaseOrder.findMany({
+        where,
+        include: { items: true },
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      database().purchaseOrder.count({ where }),
+    ]);
+    const items = rawItems as PoWithItems[];
     return {
-      items: filtered.slice(start, start + pageSize),
+      items: items.map((po) => ({
+        ...po,
+        items: po.items.map((i) => ({
+          productId: i.productId,
+          quantity: i.quantity,
+          unitPriceMinor: i.unitPriceMinor,
+          lineTotalMinor: i.lineTotalMinor,
+          currency: i.currency,
+        })),
+      })) as PurchaseOrderRecord[],
       total,
       page,
       pageSize,
     };
   }
 
-  advanceStatus(poId: string, to: PoStatus): PurchaseOrderRecord {
-    const po = this.orders.get(poId);
+  async advanceStatus(poId: string, to: PoStatus): Promise<PurchaseOrderRecord> {
+    const po = await database().purchaseOrder.findUnique({ where: { id: poId } });
     if (!po) {
       throw new NotFoundException(`Purchase Order ${poId} não encontrado`);
     }
-    const from = po.status;
+    const from = po.status as PoStatus;
     const allowed = PO_TRANSITIONS[from];
     if (!allowed?.includes(to)) {
       throw new BadRequestException(
         `Transição de estado inválida: ${from} → ${to}`,
       );
     }
-    po.status = to;
-    po.updatedAt = new Date();
-    return po;
+    const updated = await database().purchaseOrder.update({
+      where: { id: poId },
+      data: { status: to, updatedAt: new Date() },
+      include: { items: true },
+    });
+    const p = updated as PoWithItems;
+    return {
+      ...p,
+      items: p.items.map((i) => ({
+        productId: i.productId,
+        quantity: i.quantity,
+        unitPriceMinor: i.unitPriceMinor,
+        lineTotalMinor: i.lineTotalMinor,
+        currency: i.currency,
+      })),
+    } as PurchaseOrderRecord;
   }
 }
