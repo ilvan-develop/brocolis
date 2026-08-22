@@ -1,0 +1,11 @@
+gates:
+  - name: lint
+  - name: typecheck
+  - name: build
+  - name: unit
+  - name: integration
+  - name: e2e
+  - name: coverage
+  - name: security
+  - name: contract
+order: [lint, typecheck, build, unit, integration, e2e, coverage, security, contract]

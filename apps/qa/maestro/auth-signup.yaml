@@ -1,0 +1,46 @@
+# E2E Flow: Auth Sign Up and Sign In
+# Tests the authentication flow for new and existing users
+
+appId: ao.brocolis.app
+---
+- launchApp
+
+# Navigate to profile tab
+- tapOn:
+    text: "Perfil"
+
+# Tap sign in
+- tapOn:
+    text: "Entrar"
+
+# Verify sign in screen
+- assertVisible:
+    text: "Entrar"
+
+# Navigate to sign up
+- tapOn:
+    text: "Criar conta"
+
+# Fill sign up form
+- tapOn:
+    text: "Nome"
+- inputText: "Test User"
+- tapOn:
+    text: "Email"
+- inputText: "test@example.com"
+- tapOn:
+    text: "Password"
+- inputText: "password123"
+- tapOn:
+    text: "Confirmar password"
+- inputText: "password123"
+
+# Submit
+- tapOn:
+    text: "Criar conta"
+
+# Verify redirect to home (auth success)
+- extendedWaitUntil:
+    visible:
+      text: "Catálogo"
+    timeout: 5000

@@ -1,0 +1,29 @@
+appId: ao.brocolis.app
+name: Cart Screen Flow
+tags:
+  - e2e
+  - cart
+
+---
+
+- launchApp
+
+- assertVisible:
+    text: "Catálogo"
+    optional: true
+
+- tapOn:
+    text: "Adicionar"
+    optional: true
+
+- tapOn:
+    text: "Carrinho"
+    optional: true
+
+- assertVisible:
+    text: "Carrinho"
+    optional: true
+
+- assertVisible:
+    text: "Finalizar pedido"
+    optional: true

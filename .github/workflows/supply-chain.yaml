@@ -1,0 +1,39 @@
+name: Supply Chain Security
+
+on:
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+
+jobs:
+  supply-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Instalar dependências
+        run: pnpm install --frozen-lockfile
+
+      - name: Gerar SBOM (CycloneDX)
+        run: pnpm sbom --sbom-format cyclonedx > sbom.json
+
+      - name: Scan de vulnerabilidades (trivy SBOM)
+        run: trivy sbom sbom.json --severity CRITICAL,HIGH --exit-code 1 --no-progress
+
+      - name: npm audit
+        run: pnpm audit --audit-level high
+
+      - name: CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          queries: security-and-quality
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3

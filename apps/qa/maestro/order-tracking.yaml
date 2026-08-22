@@ -1,0 +1,26 @@
+# E2E Flow: Order Tracking
+# Tests viewing order details and status timeline
+
+appId: ao.brocolis.app
+---
+- launchApp
+
+# Navigate to orders tab
+- tapOn:
+    text: "Pedidos"
+
+# Verify orders screen
+- assertVisible:
+    text: "Os seus pedidos"
+
+# If there are orders, tap the first one
+- tapOn:
+    text: "#"
+
+# Verify order detail screen
+- assertVisible:
+    text: "Estado do pedido"
+
+# Verify timeline is visible
+- assertVisible:
+    text: "Pendente"

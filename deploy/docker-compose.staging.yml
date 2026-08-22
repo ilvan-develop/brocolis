@@ -1,0 +1,51 @@
+# Staging — composto baseado em imagens *built* pelos workflows do GitHub Actions.
+# Padrão (blueprint 08-CICD-GOVERNANCA.md): turbo prune + build por serviço.
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: brocolis
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d brocolis"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    volumes: [redis-data:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    image: ghcr.io/brocolis/api:${IMAGE_TAG:-staging}
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/brocolis
+      REDIS_URL: redis://redis:6379
+      WEB_ORIGIN: https://staging.brocolis.ao
+      BETTER_AUTH_URL: https://staging-api.brocolis.ao
+      FINPAY_MODE: ${FINPAY_MODE:-mock}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports: ["4000:4000"]
+
+  web:
+    image: ghcr.io/brocolis/web:${IMAGE_TAG:-staging}
+    environment:
+      NEXT_PUBLIC_API_URL: https://staging-api.brocolis.ao
+    depends_on:
+      - api
+    ports: ["3000:3000"]
+
+volumes:
+  postgres-data:
+  redis-data:

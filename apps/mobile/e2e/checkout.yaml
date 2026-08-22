@@ -1,0 +1,80 @@
+appId: ao.brocolis.app
+name: Checkout Flow
+tags:
+  - e2e
+  - checkout
+
+---
+
+- launchApp
+
+- tapOn:
+    text: "Carrinho"
+    optional: true
+
+- tapOn:
+    text: "Finalizar pedido"
+    optional: true
+
+- assertVisible:
+    text: "Finalizar pedido"
+    optional: true
+
+- assertVisible:
+    text: "Dados do cliente"
+    optional: true
+
+- tapOn:
+    text: "Nome completo"
+    optional: true
+
+- inputText: "João Silva"
+
+- tapOn:
+    text: "Telefone"
+    optional: true
+
+- inputText: "912345678"
+
+- tapOn:
+    text: "Continuar"
+    optional: true
+
+- waitForAnimationToEnd:
+    duration: 500
+
+- assertVisible:
+    text: "Morada de entrega"
+    optional: true
+
+- tapOn:
+    text: "Rua"
+    optional: true
+
+- inputText: "Rua da Missão, 123"
+
+- tapOn:
+    text: "Continuar"
+    optional: true
+
+- waitForAnimationToEnd:
+    duration: 500
+
+- assertVisible:
+    text: "Pagamento"
+    optional: true
+
+- tapOn:
+    text: "Dinheiro na entrega"
+    optional: true
+
+- tapOn:
+    text: "Continuar"
+    optional: true
+
+- waitForAnimationToEnd:
+    duration: 500
+
+- assertVisible:
+    text: "Revisão"
+    optional: true

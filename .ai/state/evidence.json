@@ -1,0 +1,81 @@
+{
+  "milestone": "MVP_V1",
+  "registry": {
+    "1F0": {
+      "date": "2026-08-20",
+      "category": "tech-research",
+      "block": "F0-INFRA",
+      "evidence": [
+        "docs/tech-research/F0-INFRA/FACTOS.md — sem gaps de versão; correções propostas: pnpm sbom --sbom-format cyclonedx, scan Trivy único (remover fallback ||), gitleaks pre-commit 'gitleaks git --pre-commit --redact --staged --verbose', volume postgres /var/lib/postgresql/data, pin sherif",
+        "ci.yml já usa pnpm/action-setup@v4 + setup-node@v4 + cache pnpm; supply-chain.yaml fallback trivy validado",
+        "docker-compose.test.yml: postgres:17 + redis:8-alpine"
+      ]
+    },
+    "2FDS": {
+      "date": "2026-08-20",
+      "category": "tech-research",
+      "block": "F-DS",
+      "evidence": [
+        "docs/tech-research/F-DS/FACTOS.md — DTCG spec 1.0/2025.10 exige $type; Recharts v3 é o standard (v2 deprecado), seguir guia migração; NativeWind v4 só Tailwind v3 (v5 para Tailwind v4, preview); i18next v24+ requer Intl.PluralRules — Hermes/RN precisa polyfill intl-pluralrules",
+        "GAP catálogo: nativewind + react-native-safe-area-context ausentes"
+      ]
+    },
+    "3F1": {
+      "date": "2026-08-20",
+      "category": "tech-research",
+      "block": "F1-AUTH",
+      "evidence": [
+        "docs/tech-research/F1-AUTH/FACTOS.md — otplib v13.4.1: Functional API async (generate/verify devolvem VerifyResult, não boolean), Base32 default, verify não-devuelve boolean; @nestjs/throttler v6.5 catalogado ✓, throttlers nomeados + @Throttle/@SkipThrottle",
+        "GAP catálogo: otplib ausente — adicionar ^13.4.1"
+      ]
+    },
+    "4F5": {
+      "date": "2026-08-20",
+      "category": "tech-research",
+      "block": "F5-MOBILE",
+      "evidence": [
+        "docs/tech-research/F5-MOBILE/FACTOS.md — biometria (expo-local-authentication) NÃO é sessão; Pattern A: refresh token em SecureStore atrás de ACL biométrica; passkeys via react-native-passkeys / expo-passkey; dark mode: userInterfaceStyle automatic + NativeWind dark: + colorScheme.set(); Hermes não tem Intl.PluralRules",
+        "GAPS catálogo: nativewind, react-native-safe-area-context, expo-status-bar, expo-system-ui, expo-navigation-bar, intl-pluralrules, (react-native-passkeys opcional)"
+      ]
+    },
+    "5F7": {
+      "date": "2026-08-20",
+      "category": "tech-research",
+      "block": "F7-LAUNCH",
+      "evidence": [
+        "docs/tech-research/F7-LAUNCH/FACTOS.md — OTel CNCF Graduated (2026-05-21); traces/metrics stable, logs experimental (pin); instrumentation.js via --import antes dos módulos; bridge pino (o mesmo project tem pino 9.14.0); sampler 0.1 prod; EAS Update: expo-updates + runtimeVersion policy appVersion, canais development/preview/production, channel surfing SDK 54+; Lighthouse CI ≥90 + budgets; IaC Terraform/Pulumi + Supabase provider; Sentry SDKs",
+        "GAPS catálogo: @opentelemetry/*, nestjs-pino, expo-updates, @sentry/*"
+      ]
+    },
+    "6GRAPHIFY-INTEGRATION": {
+      "date": "2026-08-21",
+      "category": "tech-research",
+      "block": "GOVERNANCE",
+      "evidence": [
+        "docs/GRAPHIFY-INTEGRATION.md — integração Graphify 0.9.48 + OpenCode validada; health check scripts/graphify-health.mjs = HEALTHY (fail-closed, 1 WARN ambiental: opencode CLI bloqueado por Device Guard na shell)",
+        "graph.json válido: 5956 nós / 7914 edges; diagnose multigraph: 0 colapsos/0 dangling/0 self-loops; import cycles=0 (GRAPH_REPORT.md:421)",
+        "gates PASS: query/path/affected/explain/god-nodes executados com entidades reais (affected OrdersService → 22 dependentes com ficheiro+linha)",
+        "teste rebuild real: probe scripts/tmp-graphify-probe.mjs criada→detectada (5940n/7898e)→revertida (0 residual); delta permanente +106n/+4e de re-extracção incremental de 302 ficheiros uncached — sem perda nem corrupção",
+        "freshness: 0 ficheiros fonte mais recentes que graph.json após update; hooks git post-commit/post-checkout + merge driver instalados via graphify hook install (.git/hooks ativo; .husky inativo, core.hooksPath não definido)",
+        "agent integration provada em sessão real: agente consultou graphify query/path/explain antes de responder análise arquitetural; plugin .opencode/plugins/graphify.js registado sem duplicados",
+        "WARNING não-bloqueante registado: versão OpenCode não determinável nesta shell"
+      ]
+    },
+    "7MVP1-GATE-CLOSE": {
+      "date": "2026-08-22",
+      "category": "audit",
+      "block": "MVP_V1-GATE",
+      "evidence": [
+        "Auditoria completa pedida pelo utilizador: repo tinha 0 commits e current.json marcava F0–F3 'completed' sem evidência real — typecheck e test:unit falhavam, build nem sequer completava.",
+        "Causa-raiz sistémica: catalog typescript ^7.0.0 (preview) quebrava o Nest CLI build ('does not expose the programmatic compiler API'), rollup-plugin-dts (tsup --dts) e madge. Corrigido para typescript ^5.9.3 (última estável pré-7.0) — decisão confirmada pelo utilizador antes de aplicar.",
+        "Após downgrade: --dts padronizado em todos os pacotes que faltavam .d.ts (auth, contracts, db, finpay, i18n, markets, observability, test-helpers, validation); packages/ui e packages/i18n tinham imports relativos com extensão .js que o Turbopack do Next não resolvia para .ts/.tsx (moduleResolution bundler) — corrigido removendo as extensões.",
+        "Bugs reais corrigidos (não apenas configuração): formatCurrency (separadores de milhar/decimal trocados, NBSP vs espaço configurado), requiredSecretSchema em @brocolis/validation (refine() devolvia string em vez de boolean — nunca rejeitava placeholders), InventoryService pushRefund (teste com data de validade fixa 2026-06-01 já expirada face ao relógio real), normalizeText em apps/web (não colapsava espaços múltiplos), session-provider.tsx (useReducer com generic explícito mal resolvido pelo overload do React types), 2 testes com asserções desatualizadas/erradas em @brocolis/db (contagem @@map fixa em 15, mensagem de erro), 4 testes com asserções erradas em apps/web (catalog/pharmacy-catalog/checkout).",
+        "Governança: regra dependency-cruiser no-cross-app-imports estava partida (backreference \\1 sem grupo de captura — nunca excluía imports dentro da mesma app, gerando falsos positivos); scripts/fitness-check.mjs usava grep+2>/dev/null incompatível com cmd.exe no Windows — reescrito com scan Node nativo; madge crashava sob TS7 (agora corre e exclui packages/*/src/generated/prisma, que tem ciclos legítimos gerados pelo Prisma).",
+        "graphify-health.mjs: hub 'cn()' era ambíguo entre apps/mobile e packages/ui (2 nós com o mesmo label) — explain/affected corrigidos para usar o id único do nó, não o label.",
+        "Resultado final, verificado num único run consecutivo: pnpm lint && pnpm typecheck && pnpm test:unit (238/238 testes, 24/24 ficheiros) && pnpm build (15/15 pacotes/apps) && node scripts/fitness-check.mjs (6/6, 0 avisos) — todos verdes. graphify HEALTHY. MVP_V1.status = done.",
+        "Descoberta lateral: apps/api, apps/web e packages/contracts já contêm código substancial de F4 (Procurement B2B) não registado em current.json — passa nos gates mas o ciclo completo da fase (docs/ADR/E2E/evidência) não foi auditado; marcado current=F4/in_progress, não completed."
+      ]
+    }
+  },
+  "updatedAt": "2026-08-22T10:45:00.000Z"
+}

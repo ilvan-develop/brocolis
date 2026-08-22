@@ -1,0 +1,28 @@
+# Infraestrutura de testes de integração (CI). Postgres + Redis apenas.
+# Uso: docker compose -f deploy/docker-compose.test.yml up -d
+services:
+  postgres:
+    image: postgres:17
+    container_name: brocolis-postgres-test
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: brocolis_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports: ["${BROCOLIS_TEST_POSTGRES_PORT:-25432}:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d brocolis_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    container_name: brocolis-redis-test
+    restart: unless-stopped
+    ports: ["${BROCOLIS_TEST_REDIS_PORT:-26379}:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10

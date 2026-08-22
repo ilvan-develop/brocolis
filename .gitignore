@@ -1,0 +1,55 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Builds
+dist/
+build/
+.next/
+out/
+.turbo/
+.expo/
+coverage/
+*.tsbuildinfo
+packages/db/src/generated/
+
+# Runtime
+.DS_Store
+*.pem
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Env
+.env
+.env.*
+!.env.example
+
+# IDEs
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Mobile
+apps/mobile/ios/
+apps/mobile/android/
+apps/mobile/.expo/
+apps/mobile/web-build/
+
+# Test artifacts
+apps/qa/test-results/
+apps/qa/playwright-report/
+playwright/.cache/
+
+# Local
+.vercel/
+*.local
+
+# Graphify
+graphify-out/

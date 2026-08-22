@@ -1,0 +1,48 @@
+{
+  "current": "F4",
+  "milestone": "MVP_V1",
+  "milestones": {
+    "MVP_V1": {
+      "phases": ["F0", "F-EX", "F-DS", "F1", "F2", "F3"],
+      "status": "done",
+      "exit_criteria": "Checkout FinPay mock → entrega → admin verifica, em produção",
+      "closedAt": "2026-08-22T10:45:00.000Z",
+      "closedNote": "Gate fechado após auditoria completa: lint + typecheck + build + test:unit (238/238) + governance (sherif/madge/depcruise/fitness-check, 0 erros) + graphify HEALTHY, todos verdes num único run consecutivo. Corrigidos: TypeScript catalog 7.0.2→5.9.3 (quebrava build do NestJS CLI, geração de .d.ts via tsup --dts, e madge), .d.ts em falta em auth/contracts/db/finpay/i18n/markets/observability/test-helpers/validation, bug real em formatCurrency (separadores), bug real em requiredSecretSchema (refine nunca rejeitava), 2 testes com asserções desatualizadas em @brocolis/db, regra depcruise no-cross-app-imports quebrada (backreference sem grupo de captura), config Windows-incompatível em fitness-check.mjs (grep+cmd.exe), jest.config.js do mobile (ESM/CJS + typo setupFilesAfterEnv), imports .js→.tsx do Turbopack em packages/ui e packages/i18n, e vários bugs reais em apps/web (session-provider reducer typing, exactOptionalPropertyTypes, normalizeText sem colapsar espaços, chave i18n em falta, testes com asserções erradas). Zero commits existiam antes desta sessão — histórico git começa aqui."
+    },
+    "V1_5": { "phases": ["F4"], "status": "in_progress" },
+    "V2": { "phases": ["F5", "F6"], "status": "pending" }
+  },
+  "phases": {
+    "F0": {
+      "status": "completed",
+      "branch": "main",
+      "note": "Infra/CI validada e pesquisada; correções de F0-INFRA/FACTOS pendentes de aplicação (pnpm sbom, trivy único, gitleaks, volume postgres, pin sherif)"
+    },
+    "F-EX": {
+      "status": "completed",
+      "branch": "main",
+      "note": "Experience map/módulos já cobertos na arquitetura Core; ver docs/tech-research"
+    },
+    "F-DS": {
+      "status": "completed",
+      "note": "@brocolis/ui (9 componentes + meta.ts), tokens DTCG, i18n, formatters, markets MZ/KE/NG. Pesquisa F-DS/FACTOS: recharts v3 OK; gaps nativewind + safe-area no catálogo (decidir v4/v5)"
+    },
+    "F1": {
+      "status": "completed",
+      "note": "Backend: IAM RBAC (scrypt N=16384), auth, session.store, roles.guard, tenants. Web: auth pages + onboarding + dashboard/organizations. Pesquisa F1-AUTH: otplib v13 (falta ao catálogo), throttler v6 ok"
+    },
+    "F2": {
+      "status": "completed",
+      "note": "Backend completo (catalog/cart/checkout/orders/payments + finpay mock + cuid). Web: lib + storefront B2C completo — (storefront)/ pages (catalogo, producto/[productId], carrinho, checkout wizard 7 passos), components cart/checkout/orders, i18n keys, lib/storefront + storefront-cart + testes"
+    },
+    "F3": {
+      "status": "completed",
+      "note": "Contracts inventory/prescription/pharmacy + schema F3 + api modules inventory/dispensing/settlements/pharmacy + tested settlements.service.test.ts + docs/pharmacy (README + ADR-0012). Validação por testes concluída nesta sessão (test:unit 238/238 verde, incl. pushRefund)."
+    },
+    "F4": {
+      "status": "in_progress",
+      "note": "Descoberta durante a auditoria: já existe código substancial (contracts procurement, schema Rfq/Quotation/PurchaseOrder/Supplier, apps/api/src/procurement, apps/web supplier/business portals, i18n f4-messages). Passa nos gates atuais (lint/typecheck/test/build), mas o ciclo completo da fase (03/09: docs/ADR → E2E → evidência formal) ainda não foi auditado nem fechado. Não marcar como completed sem essa verificação."
+    }
+  },
+  "updatedAt": "2026-08-22T10:45:00.000Z"
+}

@@ -1,0 +1,54 @@
+title = "Gitleaks configuration for Brócolis"
+
+[allowlist]
+  description = "Global allowlist"
+  paths = [
+    '''node_modules/''',
+    '''\.turbo/''',
+    '''dist/''',
+    '''pnpm-lock\.yaml''',
+    '''\.env\.example''',
+    '''graphify-out/''',
+  ]
+
+[[rules]]
+  id = "generic-api-key"
+  description = "Generic API Key"
+  regex = '''(?i)(api[_-]?key|apikey)[\"'\s:=]{1,5}[\"']\s*([0-9a-zA-Z\-_]{20,})'''
+  tags = ["key", "API"]
+
+[[rules]]
+  id = "generic-secret"
+  description = "Generic Secret"
+  regex = '''(?i)(secret|password|passwd|pwd)[\"'\s:=]{1,5}[\"']\s*([^\s\"']{8,})'''
+  tags = ["secret", "password"]
+
+[[rules]]
+  id = "private-key"
+  description = "Private Key"
+  regex = '''-----BEGIN (RSA |EC |DSA )?PRIVATE KEY-----'''
+  tags = ["key", "private"]
+
+[[rules]]
+  id = "aws-access-key"
+  description = "AWS Access Key"
+  regex = '''(?<![A-Z0-9])AKIA[0-9A-Z]{16}(?![A-Z0-9])'''
+  tags = ["key", "AWS"]
+
+[[rules]]
+  id = "github-token"
+  description = "GitHub Token"
+  regex = '''ghp_[0-9a-zA-Z]{36}'''
+  tags = ["key", "GitHub"]
+
+[[rules]]
+  id = "sentry-dsn"
+  description = "Sentry DSN"
+  regex = '''https://[0-9a-f]{32}@[a-z0-9\.\-]+\.ingest\.sentry\.io/[0-9]+'''
+  tags = ["key", "Sentry"]
+  [rules.allowlist]
+    description = "Allow Sentry DSN in config files"
+    paths = [
+      '''sentry\..*\.config\.ts''',
+      '''\.env\.example''',
+    ]

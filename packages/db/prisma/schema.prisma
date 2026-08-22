@@ -1,0 +1,1328 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model AuditEvent {
+  id             String   @id @default(cuid())
+  organizationId String
+  marketCode     String
+  actorType      String
+  actorId        String
+  action         String
+  resourceType   String
+  resourceId     String
+  payload        Json?
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, action, createdAt])
+  @@index([marketCode, createdAt])
+  @@map("audit_events")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Fase 1 — IAM + Tenants (02-ARQUITETURA-CONTRATOS.md §3)
+// ─────────────────────────────────────────────────────────────────────────
+
+enum UserStatus {
+  ACTIVE
+  PENDING
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum MembershipStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+enum TwoFactorType {
+  TOTP
+  SMS
+  EMAIL
+}
+
+enum OrgStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING
+  CLOSED
+}
+
+model User {
+  id            String     @id @default(cuid())
+  email         String     @unique
+  name          String
+  emailVerified Boolean    @default(false)
+  passwordHash  String?
+  image         String?
+  status        UserStatus @default(PENDING)
+  marketCode    String     @default("AO")
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  sessions      Session[]
+  accounts      Account[]
+  verifications Verification[]
+  twoFactors    TwoFactor[]
+  members       Member[]
+
+  @@index([marketCode, createdAt])
+  @@map("users")
+}
+
+model Session {
+  id                 String   @id @default(cuid())
+  userId             String
+  token              String   @unique
+  ipAddress          String?
+  userAgent          String?
+  expiresAt          DateTime
+  idleTimeoutMinutes Int      @default(30)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@map("sessions")
+}
+
+model Account {
+  id                String    @id @default(cuid())
+  userId            String
+  provider          String
+  providerAccountId String
+  accessToken       String?
+  refreshToken      String?
+  expiresAt         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Verification {
+  id        String    @id @default(cuid())
+  userId    String
+  token     String    @unique
+  type      String
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@map("verifications")
+}
+
+model TwoFactor {
+  id        String       @id @default(cuid())
+  userId    String
+  type      TwoFactorType
+  secret    String
+  enabled   Boolean      @default(false)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@map("two_factors")
+}
+
+model Role {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  isSystem       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  permissions  RolePermission[]
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("roles")
+}
+
+model Permission {
+  id        String           @id @default(cuid())
+  action    String           @unique
+  name      String
+  createdAt DateTime         @default(now())
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  roleId       String
+  permissionId String
+  createdAt    DateTime   @default(now())
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+model Organization {
+  id         String    @id @default(cuid())
+  name       String
+  slug       String    @unique
+  type       String
+  plan       String    @default("free")
+  status     OrgStatus @default(PENDING)
+  marketCode String    @default("AO")
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  members      Member[]
+  invitations  Invitation[]
+  settings     OrgSetting[]
+  featureFlags OrgFeatureFlag[]
+  whiteLabel   WhiteLabelConfig[]
+  roles        Role[]
+
+  @@index([marketCode, createdAt])
+  @@map("organizations")
+}
+
+model OrgSetting {
+  id             String   @id @default(cuid())
+  organizationId String
+  key            String
+  value          Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, key])
+  @@index([organizationId])
+  @@map("org_settings")
+}
+
+model OrgFeatureFlag {
+  id             String   @id @default(cuid())
+  organizationId String
+  feature        String
+  enabled        Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, feature])
+  @@map("org_feature_flags")
+}
+
+model Member {
+  id             String           @id @default(cuid())
+  organizationId String
+  userId         String
+  role           String
+  status         MembershipStatus @default(INVITED)
+  marketCode     String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([organizationId, marketCode, createdAt])
+  @@map("members")
+}
+
+model Invitation {
+  id             String           @id @default(cuid())
+  organizationId String
+  email          String
+  role           String
+  token          String           @unique
+  status         InvitationStatus @default(PENDING)
+  marketCode     String
+  expiresAt      DateTime
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, marketCode, createdAt])
+  @@map("invitations")
+}
+
+model WhiteLabelConfig {
+  id             String   @id @default(cuid())
+  organizationId String   @unique
+  brandName      String
+  logoUrl        String?
+  primaryColor   String?
+  marketCode     String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, marketCode, createdAt])
+  @@map("white_label_configs")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Fase 2 — B2C Commerce (02-ARQUITETURA-CONTRATOS.md §3, 09-ROADMAP-FASES.md F2)
+// Montantes em Int minor units (centavos) — ADR-0011.
+// ─────────────────────────────────────────────────────────────────────────
+
+enum OfferStatus {
+  ACTIVE
+  INACTIVE
+  OUT_OF_STOCK
+}
+
+enum Availability {
+  AVAILABLE
+  UNAVAILABLE
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  IN_TRANSIT
+  DELIVERED
+  CANCELED
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CARD
+  WALLET
+  REFERENCE
+  COD
+  MOBILE
+}
+
+model Category {
+  id         String   @id @default(cuid())
+  name       String
+  slug       String   @unique
+  parentId   String?
+  active     Boolean  @default(true)
+  marketCode String   @default("AO")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  parent   Category?      @relation("CategoryTree", fields: [parentId], references: [id])
+  children Category[]     @relation("CategoryTree")
+  products GlobalProduct[]
+
+  @@index([marketCode, createdAt])
+  @@map("categories")
+}
+
+model Brand {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  logoUrl   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products GlobalProduct[]
+
+  @@map("brands")
+}
+
+model GlobalProduct {
+  id           String   @id @default(cuid())
+  name         String
+  dci          String?
+  dosage       String?
+  form         String?
+  manufacturer String?
+  active       Boolean  @default(true)
+  brandId      String?
+  categoryId   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  brand           Brand?           @relation(fields: [brandId], references: [id])
+  category        Category?        @relation(fields: [categoryId], references: [id])
+  countryProducts CountryProduct[]
+  cartItems       CartItem[]
+  orderItems      OrderItem[]
+  medicine        Medicine?
+  batches         Batch[]
+  inventoryItems  InventoryItem[]
+  purchaseOrderItems PurchaseOrderItem[]
+  priceTiers      PriceTier[]
+  volumePrices    VolumePrice[]
+
+  @@index([categoryId])
+  @@index([brandId])
+  @@index([dci])
+  @@map("global_products")
+}
+
+model CountryProduct {
+  id                   String       @id @default(cuid())
+  globalProductId      String
+  countryCode          String
+  marketCode           String
+  name                 String
+  prescriptionRequired Boolean      @default(false)
+  availability         Availability @default(AVAILABLE)
+  referencePriceMinor  Int?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  globalProduct GlobalProduct @relation(fields: [globalProductId], references: [id])
+  offers        MarketOffer[]
+
+  @@unique([globalProductId, countryCode])
+  @@index([countryCode, marketCode, createdAt])
+  @@map("country_products")
+}
+
+model MarketOffer {
+  id                   String      @id @default(cuid())
+  organizationId       String
+  marketCode           String
+  countryProductId     String
+  pharmacyId           String
+  priceAmountMinor     Int
+  currency             String      @default("AOA")
+  stock                Int         @default(0)
+  prescriptionRequired Boolean     @default(false)
+  status               OfferStatus @default(ACTIVE)
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  countryProduct CountryProduct @relation(fields: [countryProductId], references: [id])
+  pharmacy       Pharmacy       @relation(fields: [pharmacyId], references: [id])
+
+  @@unique([pharmacyId, countryProductId])
+  @@index([organizationId, marketCode, status, createdAt])
+  @@map("market_offers")
+}
+
+model Medicine {
+  id                  String   @id @default(cuid())
+  globalProductId     String   @unique
+  composition         String?
+  pharmaceuticalForm  String?
+  classification      String?
+  atcCode             String?
+  controlledSubstance Boolean  @default(false)
+  requiresPrescription Boolean @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  globalProduct GlobalProduct @relation(fields: [globalProductId], references: [id])
+
+  @@index([atcCode])
+  @@map("medicines")
+}
+
+model Pharmacy {
+  id             String   @id @default(cuid())
+  organizationId String
+  marketCode     String
+  name           String
+  slug           String
+  status         String   @default("PENDING_VERIFICATION")
+  phone          String?
+  email          String?
+  address        String?
+  latitude       Float?
+  longitude      Float?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  offers       MarketOffer[]
+  staff        PharmacyStaff[]
+  hours        PharmacyHour[]
+  serviceAreas PharmacyServiceArea[]
+  cartItems    CartItem[]
+  orderItems   OrderItem[]
+  orderSplits  OrderSplit[]
+  batches      Batch[]
+  inventoryItems InventoryItem[]
+  inventoryAlerts InventoryAlert[]
+  verifications PharmacyVerification[]
+  settlements  PharmacySettlement[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId, marketCode, createdAt])
+  @@map("pharmacies")
+}
+
+model PharmacyStaff {
+  id         String   @id @default(cuid())
+  pharmacyId String
+  userId     String
+  role       String
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  pharmacy Pharmacy @relation(fields: [pharmacyId], references: [id], onDelete: Cascade)
+
+  @@index([pharmacyId])
+  @@map("pharmacy_staff")
+}
+
+model PharmacyHour {
+  id         String   @id @default(cuid())
+  pharmacyId String
+  dayOfWeek  Int
+  openTime   String
+  closeTime  String
+  createdAt  DateTime @default(now())
+
+  pharmacy Pharmacy @relation(fields: [pharmacyId], references: [id], onDelete: Cascade)
+
+  @@index([pharmacyId])
+  @@map("pharmacy_hours")
+}
+
+model PharmacyServiceArea {
+  id             String   @id @default(cuid())
+  pharmacyId     String
+  zone           String
+  feeAmountMinor Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  pharmacy Pharmacy @relation(fields: [pharmacyId], references: [id], onDelete: Cascade)
+
+  @@unique([pharmacyId, zone])
+  @@map("pharmacy_service_areas")
+}
+
+model Cart {
+  id             String   @id @default(cuid())
+  sessionId      String
+  organizationId String
+  marketCode     String
+  currency       String   @default("AOA")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  items            CartItem[]
+  checkoutSessions CheckoutSession[]
+
+  @@unique([sessionId, organizationId, marketCode])
+  @@map("carts")
+}
+
+model CartItem {
+  id             String        @id @default(cuid())
+  cartId         String
+  productId      String
+  pharmacyId     String
+  quantity       Int
+  unitPriceMinor Int
+  currency       String        @default("AOA")
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  cart     Cart          @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product  GlobalProduct @relation(fields: [productId], references: [id])
+  pharmacy Pharmacy      @relation(fields: [pharmacyId], references: [id])
+
+  @@unique([cartId, productId, pharmacyId])
+  @@index([pharmacyId])
+  @@map("cart_items")
+}
+
+model CheckoutSession {
+  id             String   @id @default(cuid())
+  cartId         String?
+  orderId        String?  @unique
+  organizationId String
+  marketCode     String
+  idempotencyKey String?  @unique
+  status         String   @default("PENDING")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  cart  Cart?  @relation(fields: [cartId], references: [id])
+  order Order? @relation(fields: [orderId], references: [id])
+
+  @@index([organizationId, marketCode, createdAt])
+  @@map("checkout_sessions")
+}
+
+model Order {
+  id                     String      @id @default(cuid())
+  organizationId         String
+  marketCode             String
+  customerId             String?
+  cartId                 String?
+  status                 OrderStatus @default(PENDING)
+  subtotalAmountMinor    Int
+  deliveryFeeAmountMinor Int         @default(0)
+  vatAmountMinor         Int         @default(0)
+  discountAmountMinor    Int         @default(0)
+  totalAmountMinor       Int
+  currency               String      @default("AOA")
+  paymentMethod          String?
+  deliveryAddress        Json?
+  idempotencyKey         String?     @unique
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+
+  items            OrderItem[]
+  statusHistory    OrderStatusHistory[]
+  payments         Payment[]
+  splits           OrderSplit[]
+  refunds          Refund[]
+  checkoutSession  CheckoutSession?
+
+  @@index([organizationId, marketCode, status, createdAt])
+  @@index([customerId, createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id             String        @id @default(cuid())
+  orderId        String
+  productId      String
+  pharmacyId     String
+  quantity       Int
+  unitPriceMinor Int
+  lineTotalMinor Int
+  currency       String        @default("AOA")
+  createdAt      DateTime      @default(now())
+
+  order    Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product  GlobalProduct @relation(fields: [productId], references: [id])
+  pharmacy Pharmacy      @relation(fields: [pharmacyId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+model OrderStatusHistory {
+  id        String      @id @default(cuid())
+  orderId   String
+  from      OrderStatus?
+  to        OrderStatus
+  note      String?
+  createdAt DateTime    @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+  @@map("order_status_history")
+}
+
+model OrderSplit {
+  id                    String      @id @default(cuid())
+  orderId               String
+  pharmacyId            String
+  subtotalAmountMinor   Int
+  deliveryFeeAmountMinor Int        @default(0)
+  totalAmountMinor      Int
+  currency              String      @default("AOA")
+  status                OrderStatus @default(PENDING)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  pharmacy Pharmacy @relation(fields: [pharmacyId], references: [id])
+
+  @@index([orderId])
+  @@index([pharmacyId])
+  @@map("order_splits")
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  intentId       String        @unique
+  orderId        String
+  organizationId String
+  marketCode     String
+  amountMinor    Int
+  currency       String        @default("AOA")
+  method         PaymentMethod
+  status         PaymentStatus @default(PENDING)
+  idempotencyKey String?       @unique
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  order         Order                @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  statusHistory PaymentStatusHistory[]
+  proof         PaymentProof?
+
+  @@index([orderId])
+  @@index([organizationId, marketCode, createdAt])
+  @@map("payments")
+}
+
+model PaymentProof {
+  id         String   @id @default(cuid())
+  paymentId  String   @unique
+  fileUrl    String
+  mimeType   String
+  uploadedBy String?
+  status     String   @default("PENDING")
+  createdAt  DateTime @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@map("payment_proofs")
+}
+
+model PaymentStatusHistory {
+  id        String        @id @default(cuid())
+  paymentId String
+  from      PaymentStatus?
+  to        PaymentStatus
+  note      String?
+  createdAt DateTime      @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId, createdAt])
+  @@map("payment_status_history")
+}
+
+model FinpayWebhookLog {
+  id          String    @id @default(cuid())
+  eventId     String    @unique
+  intentId    String?
+  eventType   String
+  payload     Json?
+  processed   Boolean   @default(false)
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([intentId])
+  @@index([processed, createdAt])
+  @@map("finpay_webhook_logs")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Fase 3 — Pharmacy Portal + Inventory (02-ARQUITETURA-CONTRATOS.md §3,
+// 07-FINPAY-INTEGRATION.md §5-6, 09-ROADMAP-FASES.md F3)
+// Montantes em Int minor units (centavos) — ADR-0011.
+// ─────────────────────────────────────────────────────────────────────────
+
+enum StockMovementType {
+  RECEIPT
+  ADJUSTMENT
+  DISPENSE
+  REFUND
+  RESERVATION
+  RELEASE
+}
+
+enum InventoryAlertType {
+  LOW
+  CRITICAL
+  EXPIRING
+  EXPIRED
+}
+
+enum PharmacyVerificationStatus {
+  VERIFIED
+  PREMIUM_VERIFIED
+  PENDING_VERIFICATION
+  SUSPENDED
+}
+
+enum SettlementStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+enum RefundStatus {
+  INITIATED
+  APPROVED
+  REFUNDED
+  FAILED
+}
+
+model InventoryItem {
+  id             String   @id @default(cuid())
+  productId      String
+  pharmacyId     String
+  quantityOnHand Int      @default(0)
+  reorderPoint   Int      @default(0)
+  organizationId String
+  marketCode     String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  product   GlobalProduct    @relation(fields: [productId], references: [id])
+  pharmacy  Pharmacy         @relation(fields: [pharmacyId], references: [id])
+  movements StockMovement[]
+  alerts    InventoryAlert[]
+
+  @@unique([productId, pharmacyId])
+  @@index([organizationId, marketCode, createdAt])
+  @@map("inventory_items")
+}
+
+model Batch {
+  id             String   @id @default(cuid())
+  productId      String
+  pharmacyId     String
+  batchNumber    String
+  expiryDate     DateTime
+  receivedQty    Int
+  remainingQty   Int      @default(0)
+  costPriceMinor Int      @default(0)
+  organizationId String
+  marketCode     String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  product   GlobalProduct   @relation(fields: [productId], references: [id])
+  pharmacy  Pharmacy        @relation(fields: [pharmacyId], references: [id])
+  movements StockMovement[]
+
+  @@index([productId, pharmacyId, expiryDate])
+  @@index([organizationId, marketCode, createdAt])
+  @@map("batches")
+}
+
+model StockMovement {
+  id             String            @id @default(cuid())
+  itemId         String
+  batchId        String?
+  type           StockMovementType
+  qty            Int
+  reason         String?
+  organizationId String
+  marketCode     String
+  createdAt      DateTime          @default(now())
+
+  item  InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  batch Batch?        @relation(fields: [batchId], references: [id])
+
+  @@index([itemId, type, createdAt])
+  @@index([organizationId, marketCode, createdAt])
+  @@map("stock_movements")
+}
+
+model InventoryAlert {
+  id             String            @id @default(cuid())
+  itemId         String
+  pharmacyId     String
+  type           InventoryAlertType
+  message        String?
+  thresholds     Json?
+  organizationId String
+  marketCode     String
+  createdAt      DateTime          @default(now())
+
+  item     InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  pharmacy Pharmacy      @relation(fields: [pharmacyId], references: [id])
+
+  @@index([itemId, type, createdAt])
+  @@index([organizationId, marketCode, createdAt])
+  @@map("inventory_alerts")
+}
+
+model PharmacyVerification {
+  id             String                    @id @default(cuid())
+  pharmacyId     String
+  status         PharmacyVerificationStatus
+  documentUrls   Json?
+  verifiedBy     String?
+  organizationId String
+  marketCode     String
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+
+  pharmacy Pharmacy @relation(fields: [pharmacyId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, marketCode, createdAt])
+  @@map("pharmacy_verifications")
+}
+
+model PharmacySettlement {
+  id                String           @id @default(cuid())
+  pharmacyId        String
+  organizationId    String
+  marketCode        String
+  periodStart       DateTime
+  periodEnd         DateTime
+  grossMinor        Int
+  commissionRateBps Int
+  commissionMinor   Int
+  netMinor          Int
+  reserveMinor      Int
+  status            SettlementStatus @default(PENDING)
+  finpayRef         String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  pharmacy Pharmacy @relation(fields: [pharmacyId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, marketCode, periodStart, periodEnd])
+  @@map("pharmacy_settlements")
+}
+
+model Refund {
+  id             String       @id @default(cuid())
+  orderId        String
+  organizationId String
+  marketCode     String
+  amountMinor    Int
+  reason         String
+  status         RefundStatus @default(INITIATED)
+  finpayRef      String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([organizationId, marketCode, createdAt])
+  @@map("refunds")
+}
+
+model CommissionRate {
+  id             String   @id @default(cuid())
+  organizationId String
+  marketCode     String
+  rateBps        Int
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([organizationId, marketCode])
+  @@index([organizationId, marketCode, active, createdAt])
+  @@map("commission_rates")
+}
+// ─────────────────────────────────────────────────────────────────────────
+// Fase 6 — B2B2C + Receitas digitais + Compliance (docs/compliance/README.md)
+// ─────────────────────────────────────────────────────────────────────────
+
+enum HealthcareProfessionalStatus {
+  VERIFIED
+  PENDING
+  SUSPENDED
+}
+
+enum EPrescriptionStatus {
+  ACTIVE
+  DISPENSED
+  EXPIRED
+  REVOKED
+  REJECTED
+}
+
+enum ComplianceSubjectType {
+  HEALTHCARE_PROFESSIONAL
+  PHARMACY
+  SUPPLIER
+  PRODUCT
+  E_PRESCRIPTION
+}
+
+enum ComplianceDecisionOutcome {
+  APPROVED
+  REJECTED
+  ESCALATED
+}
+
+enum SaftExportType {
+  FULL
+  SALES
+  PURCHASES
+}
+
+enum SaftExportStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model HealthcareProfessional {
+  id                   String                       @id @default(cuid())
+  organizationId       String
+  marketCode           String
+  name                 String
+  specialty            String
+  credentialType       String
+  credentialNumber     String
+  credentialIssuedBy   String?
+  credentialIssuedAt   DateTime?
+  credentialExpiresAt  DateTime?
+  verificationStatus   HealthcareProfessionalStatus @default(PENDING)
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @updatedAt
+
+  ePrescriptions EPrescription[]
+
+  @@index([organizationId, marketCode, verificationStatus])
+  @@map("healthcare_professionals")
+}
+
+model EPrescription {
+  id                    String              @id @default(cuid())
+  organizationId        String
+  marketCode            String
+  professionalId        String
+  patientRef            String
+  issuedAt              DateTime            @default(now())
+  expiresAt             DateTime
+  daysValid             Int
+  signatureHash         String
+  status                EPrescriptionStatus @default(ACTIVE)
+  sourceMarketCode      String
+  dispensedByPharmacyId String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  professional   HealthcareProfessional @relation(fields: [professionalId], references: [id], onDelete: Restrict)
+  items          EPrescriptionItem[]
+
+  @@index([organizationId, marketCode, status, expiresAt])
+  @@index([patientRef])
+  @@map("e_prescriptions")
+}
+
+model EPrescriptionItem {
+  id              String @id @default(cuid())
+  prescriptionId  String
+  productId       String
+  activeSubstance String
+  dosage          String
+  instructions    String
+  quantity        Int
+
+  prescription EPrescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+
+  @@index([prescriptionId])
+  @@index([productId])
+  @@map("e_prescription_items")
+}
+
+model RegulatoryPolicy {
+  id                            String   @id @default(cuid())
+  marketCode                    String   @unique
+  controlledSubstances          Json
+  prescriptionRequiredCategories Json
+  maxPrescriptionDaysValid      Int      @default(30)
+  licenseRequirements           Json
+  saftEnabled                   Boolean  @default(false)
+  agtEndpoint                   String?
+  createdAt                     DateTime @default(now())
+  updatedAt                     DateTime @updatedAt
+
+  @@map("regulatory_policies")
+}
+
+model ComplianceDecision {
+  id             String                    @id @default(cuid())
+  organizationId String
+  marketCode     String
+  subjectType    ComplianceSubjectType
+  subjectId      String
+  decision       ComplianceDecisionOutcome
+  reason         String
+  decidedBy      String
+  decidedAt      DateTime                  @default(now())
+
+  @@index([organizationId, marketCode, subjectType, decidedAt])
+  @@index([subjectId])
+  @@map("compliance_decisions")
+}
+
+model SaftExportJob {
+  id             String           @id @default(cuid())
+  organizationId String
+  marketCode     String
+  periodStart    DateTime
+  periodEnd      DateTime
+  type           SaftExportType   @default(FULL)
+  status         SaftExportStatus @default(QUEUED)
+  requestedBy    String
+  fileUrl        String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([organizationId, marketCode, status, createdAt])
+  @@map("saft_export_jobs")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Fase 4 — Procurement B2B (09-ROADMAP-FASES.md F4)
+// Montantes em Int minor units (centavos) — ADR-0011.
+// ─────────────────────────────────────────────────────────────────────────
+
+enum RfqStatus {
+  DRAFT
+  OPEN
+  QUOTED
+  AWARDED
+  CANCELED
+  EXPIRED
+}
+
+enum QuotationStatus {
+  DRAFT
+  SUBMITTED
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum PoStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  CONFIRMED
+  IN_DELIVERY
+  DELIVERED
+  COMPLETED
+  CANCELED
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ESCALATED
+}
+
+enum CreditStatus {
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum SupplierStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model Supplier {
+  id             String         @id @default(cuid())
+  organizationId String
+  marketCode     String
+  name           String
+  slug           String
+  status         SupplierStatus @default(ACTIVE)
+  contactEmail   String?
+  contactPhone   String?
+  address        Json?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  priceTiers        PriceTier[]
+  volumePrices      VolumePrice[]
+  rfqs              Rfq[]
+  quotations        Quotation[]
+  purchaseOrders    PurchaseOrder[]
+  creditAccounts    CreditAccount[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId, marketCode, status, createdAt])
+  @@map("suppliers")
+}
+
+model Rfq {
+  id             String    @id @default(cuid())
+  organizationId String
+  marketCode     String
+  supplierId     String
+  reference      String    @unique
+  subject        String
+  status         RfqStatus @default(DRAFT)
+  validUntil     DateTime?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  supplier     Supplier      @relation(fields: [supplierId], references: [id])
+  quotations   Quotation[]
+
+  @@index([organizationId, marketCode, status, createdAt])
+  @@index([supplierId, createdAt])
+  @@map("rfqs")
+}
+
+model Quotation {
+  id             String           @id @default(cuid())
+  organizationId String
+  marketCode     String
+  rfqId          String
+  supplierId     String
+  reference      String           @unique
+  status         QuotationStatus  @default(DRAFT)
+  totalAmountMinor Int
+  currency       String           @default("AOA")
+  validUntil     DateTime?
+  notes          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  rfq            Rfq              @relation(fields: [rfqId], references: [id])
+  supplier       Supplier         @relation(fields: [supplierId], references: [id])
+  purchaseOrders PurchaseOrder[]
+
+  @@index([organizationId, marketCode, status, createdAt])
+  @@index([rfqId, createdAt])
+  @@index([supplierId, createdAt])
+  @@map("quotations")
+}
+
+model PurchaseOrder {
+  id                    String    @id @default(cuid())
+  organizationId        String
+  marketCode            String
+  quotationId           String?
+  supplierId            String
+  reference             String    @unique
+  status                PoStatus  @default(DRAFT)
+  totalAmountMinor      Int
+  currency              String   @default("AOA")
+  requestedDeliveryDate DateTime?
+  notes                 String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  quotation         Quotation?           @relation(fields: [quotationId], references: [id])
+  supplier          Supplier             @relation(fields: [supplierId], references: [id])
+  items             PurchaseOrderItem[]
+  approvalWorkflows ApprovalWorkflow[]
+
+  @@index([organizationId, marketCode, status, createdAt])
+  @@index([supplierId, createdAt])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String   @id @default(cuid())
+  purchaseOrderId String
+  productId       String
+  quantity        Int
+  unitPriceMinor  Int
+  lineTotalMinor  Int
+  currency        String   @default("AOA")
+  createdAt       DateTime @default(now())
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  product       GlobalProduct @relation(fields: [productId], references: [id])
+
+  @@index([purchaseOrderId])
+  @@index([productId])
+  @@map("purchase_order_items")
+}
+
+model ApprovalWorkflow {
+  id              String           @id @default(cuid())
+  purchaseOrderId String
+  approverId      String
+  status          ApprovalStatus   @default(PENDING)
+  level           Int              @default(1)
+  notes           String?
+  decidedAt       DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseOrderId, status])
+  @@index([approverId, status])
+  @@map("approval_workflows")
+}
+
+model CreditAccount {
+  id             String        @id @default(cuid())
+  organizationId String
+  marketCode     String
+  supplierId     String
+  creditLimitMinor Int
+  balanceMinor   Int           @default(0)
+  currency       String        @default("AOA")
+  status         CreditStatus  @default(ACTIVE)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  supplier Supplier @relation(fields: [supplierId], references: [id])
+
+  @@unique([organizationId, supplierId])
+  @@index([organizationId, marketCode, status, createdAt])
+  @@map("credit_accounts")
+}
+
+model PriceTier {
+  id             String   @id @default(cuid())
+  supplierId     String
+  productId      String
+  minQty         Int
+  maxQty         Int?
+  unitPriceMinor Int
+  currency       String   @default("AOA")
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  supplier     Supplier      @relation(fields: [supplierId], references: [id])
+  product      GlobalProduct @relation(fields: [productId], references: [id])
+
+  @@unique([supplierId, productId, minQty])
+  @@index([supplierId, productId, active])
+  @@map("price_tiers")
+}
+
+model VolumePrice {
+  id             String   @id @default(cuid())
+  supplierId     String
+  productId      String
+  minVolume      Int
+  discountBps    Int
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  supplier Supplier      @relation(fields: [supplierId], references: [id])
+  product  GlobalProduct @relation(fields: [productId], references: [id])
+
+  @@unique([supplierId, productId, minVolume])
+  @@index([supplierId, productId, active])
+  @@map("volume_prices")
+}

@@ -1,0 +1,29 @@
+# E2E Flow: Search Products
+# Tests the search functionality in the B2C consumer app
+
+appId: ao.brocolis.app
+---
+- launchApp
+
+# Navigate to search tab
+- tapOn:
+    text: "Pesquisar"
+
+# Verify search screen
+- assertVisible:
+    text: "Pesquisar medicamentos..."
+
+# Type a search query
+- tapOn:
+    text: "Pesquisar medicamentos..."
+- inputText: "Paracetamol"
+
+# Wait for results
+- extendedWaitUntil:
+    visible:
+      text: "Paracetamol"
+    timeout: 5000
+
+# Verify results appear
+- assertVisible:
+    text: "resultados"

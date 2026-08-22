@@ -1,0 +1,7 @@
+pipeline:
+  name: brocolis-delivery
+  phases: [discovery, requirements, architecture, plan, implement, verify, audit, review, integration, staging, e2e, security, release, production, observability, feedback]
+  state_file: .ai/state/current.json
+  evidence_file: .ai/state/evidence.json
+  continue: true
+  auto: true

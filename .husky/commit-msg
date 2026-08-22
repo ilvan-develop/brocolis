@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+echo "A validar mensagem de commit (commitlint)..."
+pnpm exec commitlint --edit "$1"

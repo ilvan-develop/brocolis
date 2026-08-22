@@ -1,0 +1,67 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: brocolis-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: brocolis
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports: ["${BROCOLIS_POSTGRES_PORT:-15432}:5432"]
+    volumes: [brocolis-postgres17-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d brocolis"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    container_name: brocolis-redis
+    restart: unless-stopped
+    ports: ["${BROCOLIS_REDIS_PORT:-16379}:6379"]
+    volumes: [brocolis-redis-data:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: brocolis-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: brocolis
+      MINIO_ROOT_PASSWORD: brocolis-minio
+    ports: ["${BROCOLIS_MINIO_PORT:-19000}:9000", "19001:9001"]
+    volumes: [brocolis-minio-data:/data]
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Observabilidade (F7) — opcional: docker compose --profile observability up
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.125.0
+    container_name: brocolis-otel-collector
+    profiles: ["observability"]
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./infra/observability/otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+    ports: ["14317:4317", "14318:4318"]
+
+  prometheus:
+    image: prom/prometheus:v3.4.0
+    container_name: brocolis-prometheus
+    profiles: ["observability"]
+    volumes:
+      - ./infra/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports: ["19090:9090"]
+
+volumes:
+  brocolis-postgres17-data:
+  brocolis-redis-data:
+  brocolis-minio-data:

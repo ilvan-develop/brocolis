@@ -1,0 +1,14 @@
+{
+  "$comment": "Budgets de bundle (blueprint 18-EVAL). Valores em bytes GZIP medidos por scripts/check-bundle.mjs. Web: output .next; Mobile: dist/ após `npx expo export` (F7+).",
+  "web": {
+    "buildDir": "apps/web/.next",
+    "maxTotalJsGzipBytes": 500000,
+    "maxSingleChunkGzipBytes": 180000,
+    "maxTotalCssGzipBytes": 80000
+  },
+  "mobile": {
+    "buildDir": "apps/mobile/dist",
+    "maxTotalJsGzipBytes": 1500000,
+    "maxSingleChunkGzipBytes": 600000
+  }
+}

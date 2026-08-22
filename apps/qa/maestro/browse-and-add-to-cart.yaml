@@ -1,0 +1,66 @@
+# E2E Flow: Browse and Add to Cart
+# Tests the core B2C consumer journey: browse catalog → view product → add to cart → view cart
+
+appId: ao.brocolis.app
+---
+- launchApp
+
+# Verify home screen loads
+- assertVisible:
+    text: "Catálogo"
+- assertVisible:
+    text: "Medicamentos e produtos de saúde"
+
+# Tap on first product card
+- tapOn:
+    text: "Adicionar"
+
+# Navigate to cart
+- tapOn:
+    text: "Carrinho"
+
+# Verify cart has items
+- assertVisible:
+    text: "Carrinho"
+- assertVisible:
+    text: "Finalizar pedido"
+
+# Go to checkout
+- tapOn:
+    text: "Finalizar pedido"
+
+# Fill client info
+- tapOn:
+    text: "Nome completo"
+- inputText: "Maria Silva"
+- tapOn:
+    text: "Telefone"
+- inputText: "923456789"
+- tapOn:
+    text: "Continuar"
+
+# Fill delivery address
+- tapOn:
+    text: "Rua"
+- inputText: "Rua da Missão, 45"
+- tapOn:
+    text: "Município"
+- inputText: "Luanda"
+- tapOn:
+    text: "Continuar"
+
+# Select payment method
+- tapOn:
+    text: "Dinheiro na entrega"
+- tapOn:
+    text: "Continuar"
+
+# Review and place order
+- assertVisible:
+    text: "Revisão"
+- tapOn:
+    text: "Confirmar e pagar"
+
+# Verify order confirmation
+- assertVisible:
+    text: "Pedido confirmado!"

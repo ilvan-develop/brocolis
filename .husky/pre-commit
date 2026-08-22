@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+echo "A executar lint-staged..."
+pnpm exec lint-staged
+
+if command -v gitleaks >/dev/null 2>&1; then
+  echo "A verificar segredos (gitleaks)..."
+  gitleaks detect --staged --verbose --no-banner
+fi

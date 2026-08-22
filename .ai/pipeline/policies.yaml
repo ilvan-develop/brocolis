@@ -1,0 +1,7 @@
+policies:
+  mode: allow-deny
+  deny: [ask, question]
+  allow: [write, edit, bash, run, test, commit]
+  branch: feat/*
+  merge: via PR
+  evidence_required: true

@@ -1,0 +1,82 @@
+/*
+ * tokens.css — design.json (W3C DTCG) → CSS variables runtime
+ *
+ * Complementa src/styles/globals.css (base shadcn + @source directive).
+ * Importar DEPOIS de globals.css para que o verde Brócolis (brand) vença o
+ * default do shadcn:
+ *
+ *   @import "@brocolis/ui/globals.css";
+ *   @import "@brocolis/ui/tokens.css";
+ */
+
+@theme inline {
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+  --color-brand-primary: var(--brand-500);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+}
+
+:root {
+  /* color.brand.* — verde Brócolis ~oklch(0.55 0.15 152) */
+  --brand-50: oklch(0.97 0.015 152);
+  --brand-100: oklch(0.93 0.04 152);
+  --brand-200: oklch(0.87 0.07 152);
+  --brand-300: oklch(0.78 0.11 152);
+  --brand-400: oklch(0.68 0.13 152);
+  --brand-500: oklch(0.55 0.15 152);
+  --brand-600: oklch(0.48 0.13 152);
+  --brand-700: oklch(0.41 0.11 152);
+  --brand-800: oklch(0.35 0.09 152);
+  --brand-900: oklch(0.28 0.07 152);
+
+  /* color.status.* */
+  --success: oklch(0.6 0.13 152);
+  --warning: oklch(0.79 0.15 80);
+  --danger: oklch(0.577 0.245 27.325);
+  --info: oklch(0.55 0.12 240);
+
+  /* component tokens (design.json → components.*) */
+  --button-primary-bg: var(--brand-500);
+  --button-primary-hover: var(--brand-600);
+  --button-primary-foreground: oklch(0.985 0 0);
+  --card-bg: oklch(1 0 0);
+  --card-border: oklch(0.922 0 0);
+  --input-bg: oklch(1 0 0);
+  --input-border: oklch(0.922 0 0);
+  --input-focus-border: var(--brand-400);
+  --skeleton-bg: oklch(0.97 0 0);
+
+  /* overrides shadcn — o verde Brócolis torna-se a cor de acção primária */
+  --primary: oklch(0.55 0.15 152);
+  --primary-foreground: oklch(0.985 0 0);
+  --ring: oklch(0.68 0.13 152);
+}
+
+.dark {
+  --brand-500: oklch(0.72 0.11 152);
+  --brand-600: oklch(0.78 0.11 152);
+  --success: oklch(0.72 0.15 152);
+
+  --button-primary-bg: var(--brand-500);
+  --button-primary-hover: var(--brand-600);
+  --card-bg: oklch(0.205 0 0);
+  --card-border: oklch(1 0 0 / 10%);
+  --input-bg: oklch(0.205 0 0);
+  --input-border: oklch(1 0 0 / 15%);
+  --skeleton-bg: oklch(0.269 0 0);
+
+  --primary: oklch(0.72 0.11 152);
+  --primary-foreground: oklch(0.145 0 0);
+  --ring: oklch(0.68 0.13 152);
+}

@@ -1,0 +1,24 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2022",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "strictPropertyInitialization": false,
+    "allowSyntheticDefaultImports": true,
+    "noEmit": true,
+    "paths": {
+      "@brocolis/auth": ["../../packages/auth/src/index.ts"],
+      "@brocolis/contracts": ["../../packages/contracts/src/index.ts"],
+      "@brocolis/db": ["../../packages/db/src/index.ts"],
+      "@brocolis/finpay": ["../../packages/finpay/src/index.ts"],
+      "@brocolis/markets": ["../../packages/markets/src/index.ts"],
+      "@brocolis/observability": ["../../packages/observability/src/index.ts"],
+      "@brocolis/validation": ["../../packages/validation/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Instalar dependências (frozen)
+        run: pnpm install --frozen-lockfile
+
+      - name: Verificar deriva de dependências
+        run: npx sherif
+
+      - name: Lint (Biome)
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Build
+        run: pnpm build
+
+      - name: Testes unitários
+        run: pnpm test:unit
+
+      - name: Cobertura mínima (>=80%)
+        run: pnpm test:unit -- --coverage.enabled --coverage.thresholds.lines=80
+
+      - name: Governança monorepo
+        run: node scripts/fitness-check.mjs
+
+      - name: Importação, multiplicação de dependências
+        run: npx depcruise packages/ apps/ --config .dependency-cruiser.cjs

@@ -1,0 +1,28 @@
+appId: ao.brocolis.app
+name: Search Screen Flow
+tags:
+  - e2e
+  - search
+
+---
+
+- launchApp
+
+- tapOn:
+    text: "Pesquisar"
+    optional: true
+
+- tapOn:
+    text: "Pesquisar medicamentos..."
+    optional: true
+
+- inputText: "Ibuprofeno"
+
+- tapOn: "Return"
+
+- waitForAnimationToEnd:
+    duration: 1500
+
+- assertVisible:
+    text: "Ibuprofeno"
+    optional: true

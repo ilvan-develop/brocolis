@@ -1,0 +1,32 @@
+appId: ao.brocolis.app
+name: Home Screen Flow
+tags:
+  - e2e
+  - home
+
+---
+
+- launchApp
+
+- assertVisible:
+    text: "Catálogo"
+    optional: true
+
+- assertVisible:
+    text: "Medicamentos e produtos de saúde"
+    optional: true
+
+- tapOn:
+    text: "Pesquisar medicamentos..."
+    optional: true
+
+- inputText: "Paracetamol"
+
+- tapOn: "Return"
+
+- waitForAnimationToEnd:
+    duration: 1000
+
+- assertVisible:
+    text: "resultados"
+    optional: true

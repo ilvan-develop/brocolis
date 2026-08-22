@@ -1,0 +1,71 @@
+# OpenTelemetry Collector (F7 — docs/tech-research/F7-LAUNCH/FACTOS.md §1).
+# Recebe OTLP (4317 gRPC / 4318 HTTP), filtra health checks, faz batch e exporta
+# métricas para Prometheus + traces/logs para o backend APM (OTLP HTTP).
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # FACTOS: batch timeout 10s
+  batch:
+    timeout: 10s
+    send_batch_size: 512
+
+  # FACTOS: filtrar health checks (30-50% do volume de traces)
+  filter/healthchecks:
+    error_mode: ignore
+    traces:
+      span:
+        - 'attributes["http.route"] == "/health"'
+        - 'attributes["http.target"] == "/health"'
+        - 'attributes["url.path"] == "/health"'
+    metrics:
+      metric:
+        - 'name == "http.server.duration" and attributes["http.route"] == "/health"'
+
+  # Cardinality: rotas parametrizadas no app (/users/:id); aqui limita atributos de alto risco
+  attributes/cardinality:
+    actions:
+      - key: http.request.header.user_agent
+        action: delete
+      - key: url.full
+        action: hash
+
+exporters:
+  # Métricas → Prometheus scrape (:8889)
+  prometheus:
+    endpoint: 0.0.0.0:8889
+
+  # Traces/logs/metrics → backend APM (Sentry/Grafana/Dash0) via OTLP HTTP.
+  # Em dev local usa o exporter debug; em staging/prod apontar OTEL_EXPORTER_OTLP_ENDPOINT.
+  otlphttp/apm:
+    endpoint: ${env:OTEL_EXPORTER_OTLP_ENDPOINT}
+    headers:
+      authorization: ${env:OTEL_EXPORTER_AUTH_HEADER}
+
+  debug:
+    verbosity: basic
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [filter/healthchecks, attributes/cardinality, batch]
+      exporters: [otlphttp/apm, debug]
+    metrics:
+      receivers: [otlp]
+      processors: [attributes/cardinality, batch]
+      exporters: [prometheus, otlphttp/apm]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/apm]

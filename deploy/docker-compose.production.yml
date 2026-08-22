@@ -1,0 +1,3 @@
+# Produção — definido na F7 (Endurecimento + Launch) com runbooks (08).
+# Reutiliza o padrão do staging, com healthchecks, limites de recurso
+# e backups (WAL archiving; 20-DISASTER-RECOVERY.md).

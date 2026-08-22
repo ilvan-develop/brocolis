@@ -1,0 +1,30 @@
+# CODEOWNERS — dono obrigatório por área (regra AP-11)
+
+# Apps
+/apps/web/             @team/wareem
+/apps/api/             @team/wareem
+/apps/mobile/          @team/wareem
+/apps/qa/              @team/wareem
+
+# Packages
+/packages/contracts/   @team/wareem
+/packages/db/          @team/wareem
+/packages/auth/        @team/wareem
+/packages/ui/          @team/wareem
+/packages/i18n/        @team/wareem
+/packages/markets/     @team/wareem
+/packages/formatters/  @team/wareem
+/packages/finpay/      @team/wareem
+/packages/validation/  @team/wareem
+/packages/observability/ @team/wareem
+/packages/test-helpers/  @team/wareem
+
+# Configuração
+/turbo.json            @team/wareem
+/pnpm-workspace.yaml   @team/wareem
+/tsconfig.base.json    @team/wareem
+/package.json          @team/wareem
+/.github/              @team/wareem
+/scripts/              @team/wareem
+/.ai/                  @team/wareem
+/blueprint/            @team/wareem

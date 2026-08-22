@@ -1,0 +1,40 @@
+name: Lighthouse CI
+
+on:
+  pull_request:
+    paths:
+      - "apps/web/**"
+      - "packages/ui/**"
+      - "packages/i18n/**"
+      - "scripts/lighthouserc.json"
+      - "scripts/budgets.json"
+  workflow_dispatch:
+
+concurrency:
+  group: lighthouse-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lighthouse:
+    name: Lighthouse (>=90 em todas as categorias)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Instalar dependências (frozen)
+        run: pnpm install --frozen-lockfile
+
+      - name: Build web
+        run: pnpm --filter @brocolis/web build
+
+      - name: Bundle budgets (scripts/check-bundle.mjs)
+        run: node scripts/check-bundle.mjs
+
+      - name: LHCI autorun
+        run: pnpm dlx @lhci/cli@0.15.0 autorun --config=./scripts/lighthouserc.json

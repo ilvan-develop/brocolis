@@ -1,0 +1,49 @@
+{
+  "name": "brocolis",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.21.0",
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=11.21.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:unit": "turbo run test:unit",
+    "test:integration": "turbo run test:integration",
+    "test:e2e": "turbo run test:e2e",
+    "db:generate": "turbo run db:generate",
+    "db:migrate": "turbo run db:migrate",
+    "db:seed": "turbo run db:seed",
+    "docs:generate": "turbo run docs:generate",
+    "governance": "node scripts/fitness-check.mjs",
+    "quality:gate": "node scripts/quality-gate.mjs",
+    "drift": "sherif",
+    "circular": "madge --circular --ts-config ./tsconfig.base.json --extensions ts packages/ apps/",
+    "depcruise": "dependency-cruiser --config .dependency-cruiser.cjs --output-type err packages apps",
+    "format": "biome format --write .",
+    "check": "biome check --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@changesets/cli": "catalog:",
+    "@commitlint/cli": "^21.0.0",
+    "@commitlint/config-conventional": "^21.0.0",
+    "@dotenvx/dotenvx": "catalog:",
+    "@playwright/test": "catalog:",
+    "@types/node": "catalog:",
+    "dependency-cruiser": "^18.2.0",
+    "husky": "catalog:",
+    "lint-staged": "catalog:",
+    "madge": "^8.0.0",
+    "sherif": "^1.9.0",
+    "turbo": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

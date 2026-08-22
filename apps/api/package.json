@@ -1,0 +1,45 @@
+{
+  "name": "api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nest build",
+    "dev": "nest start --watch",
+    "start": "node dist/main.js",
+    "lint": "biome check src",
+    "typecheck": "tsc --noEmit",
+    "test:unit": "vitest run"
+  },
+  "dependencies": {
+    "@brocolis/auth": "workspace:*",
+    "@brocolis/contracts": "workspace:*",
+    "@brocolis/db": "workspace:*",
+    "@brocolis/finpay": "workspace:*",
+    "@brocolis/markets": "workspace:*",
+    "@brocolis/observability": "workspace:*",
+    "@brocolis/validation": "workspace:*",
+    "@nestjs/common": "catalog:",
+    "@nestjs/config": "catalog:",
+    "@nestjs/core": "catalog:",
+    "@nestjs/platform-express": "catalog:",
+    "@nestjs/throttler": "catalog:",
+    "@sentry/nestjs": "catalog:",
+    "helmet": "catalog:",
+    "ioredis": "catalog:",
+    "minio": "catalog:",
+    "nestjs-pino": "catalog:",
+    "pino": "catalog:",
+    "reflect-metadata": "catalog:",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@nestjs/testing": "^11.1.24",
+    "@types/express": "^5.0.0",
+    "@types/node": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
