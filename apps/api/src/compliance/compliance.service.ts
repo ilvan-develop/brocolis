@@ -108,7 +108,7 @@ export class ComplianceService {
   async listPolicies(): Promise<RegulatoryPolicy[]> {
     const db = await database();
     const records = await db.regulatoryPolicy.findMany();
-    return records.map((r) => ({
+    return records.map((r: any) => ({
       marketCode: r.marketCode,
       controlledSubstances: r.controlledSubstances as string[],
       prescriptionRequiredCategories: r.prescriptionRequiredCategories as string[],
@@ -211,7 +211,7 @@ export class ComplianceService {
       }
     }
     const records = await db.complianceDecision.findMany({ where });
-    return records.map((r) => ({
+    return records.map((r: any) => ({
       id: r.id,
       subjectType: r.subjectType as ComplianceDecision["subjectType"],
       subjectId: r.subjectId,
@@ -312,7 +312,7 @@ export class ComplianceService {
       where: { organizationId, marketCode },
       orderBy: { createdAt: "desc" },
     });
-    return records.map((r) => ({
+    return records.map((r: any) => ({
       id: r.id,
       organizationId: r.organizationId,
       marketCode: r.marketCode,
@@ -356,7 +356,7 @@ export class ComplianceService {
       where,
       orderBy: { createdAt: "desc" },
     });
-    return records.map((r) => ({
+    return records.map((r: any) => ({
       id: r.id,
       organizationId: r.organizationId,
       marketCode: r.marketCode,
@@ -375,7 +375,7 @@ export class ComplianceService {
     const records = await db.auditEvent.findMany({
       orderBy: { createdAt: "desc" },
     });
-    return records.map((r) => ({
+    return records.map((r: any) => ({
       organizationId: r.organizationId,
       marketCode: r.marketCode,
       actorType: r.actorType,

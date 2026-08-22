@@ -9,7 +9,7 @@
     "start": "node dist/main.js",
     "lint": "biome check src",
     "typecheck": "tsc --noEmit",
-    "test:unit": "vitest run"
+    "test:unit": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
     "@brocolis/auth": "workspace:*",

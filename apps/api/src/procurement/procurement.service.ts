@@ -595,13 +595,13 @@ export class ProcurementService {
   }
 
   /** Delega o export AGT/SAF-T ao ComplianceService (type="PURCHASES"). */
-  requestInvoiceSaftExport(input: {
+  async requestInvoiceSaftExport(input: {
     organizationId: string;
     marketCode: string;
     requestedBy: string;
     periodStart: Date;
     periodEnd: Date;
-  }): SaftExportJob {
+  }): Promise<SaftExportJob> {
     return this.complianceService.requestSaftExport({
       organizationId: input.organizationId,
       marketCode: input.marketCode,

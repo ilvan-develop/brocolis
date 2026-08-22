@@ -2,6 +2,26 @@ import { describe, expect, it, vi } from "vitest";
 import { NotFoundException } from "@nestjs/common";
 import { SaftExportService } from "./saft-export.service.js";
 
+vi.mock("@brocolis/db", () => {
+  const store: Record<string, unknown> = {};
+  return {
+    database: () => ({
+      saftExportJob: {
+        create: ({ data }: any) => {
+          const record = { ...data, id: `c${Date.now().toString(36).padStart(12, "0")}`, createdAt: new Date(), updatedAt: new Date() };
+          store[`job:${record.id}`] = record;
+          return Promise.resolve(record);
+        },
+        findMany: () => Promise.resolve([]),
+        findUnique: ({ where }: any) => {
+          const record = store[`job:${where.id}`];
+          return Promise.resolve(record ?? null);
+        },
+      },
+    }),
+  };
+});
+
 function makeOrder(overrides: Record<string, unknown> = {}) {
   return {
     id: "c000000000000000000000201",

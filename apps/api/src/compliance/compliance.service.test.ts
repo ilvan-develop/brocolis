@@ -3,6 +3,38 @@ import { describe, expect, it, vi } from "vitest";
 import { ComplianceService, PLATFORM_ORG } from "./compliance.service.js";
 import { regulatoryPolicySchema } from "@brocolis/contracts";
 
+vi.mock("@brocolis/db", () => {
+  const store: Record<string, unknown> = {};
+  return {
+    database: () => ({
+      regulatoryPolicy: {
+        findMany: () => Promise.resolve([]),
+        upsert: ({ where, create, update }: any) => {
+          const key = `policy:${where.marketCode}`;
+          const existing = store[key] as Record<string, unknown> | undefined;
+          const record = existing ? { ...existing, ...update } : { ...create, id: `c${Date.now().toString(36).padStart(12, "0")}`, createdAt: new Date(), updatedAt: new Date() };
+          store[key] = record;
+          return Promise.resolve(record);
+        },
+      },
+      complianceDecision: {
+        findMany: () => Promise.resolve([]),
+        create: ({ data }: any) => {
+          const record = { ...data, id: `c${Date.now().toString(36).padStart(12, "0")}`, createdAt: new Date(), updatedAt: new Date() };
+          return Promise.resolve(record);
+        },
+      },
+      saftExportJob: {
+        findMany: () => Promise.resolve([]),
+        create: ({ data }: any) => {
+          const record = { ...data, id: `c${Date.now().toString(36).padStart(12, "0")}`, createdAt: new Date(), updatedAt: new Date() };
+          return Promise.resolve(record);
+        },
+      },
+    }),
+  };
+});
+
 const ORG = "00000000-0000-4000-8000-000000000000";
 const ORG_OTHER = "00000000-0000-4000-8000-000000000001";
 const SUBJECT = "c1234567890abcdef00000001";

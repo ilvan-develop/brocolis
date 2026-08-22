@@ -55,9 +55,9 @@ export class PrescriptionDigitalService {
     this.compliance = compliance ?? null;
   }
 
-  policyFor(marketCode: string): RegulatoryPolicy {
+  async policyFor(marketCode: string): Promise<RegulatoryPolicy> {
     if (this.compliance) {
-      return this.compliance.policyForMarketOrDefault(marketCode);
+      return await this.compliance.policyForMarketOrDefault(marketCode);
     }
     return policyForMarket(marketCode, []);
   }
@@ -123,7 +123,7 @@ export class PrescriptionDigitalService {
     );
   }
 
-  issue(input: unknown): EPrescription {
+  async issue(input: unknown): Promise<EPrescription> {
     const parsed = issueEPrescriptionInputSchema.parse(input);
     const professional = this.getScopedProfessional(
       parsed.organizationId,
@@ -135,7 +135,7 @@ export class PrescriptionDigitalService {
         `Profissional em ${professional.verificationStatus} — só profissionais verificados emitem receitas digitais`,
       );
     }
-    const policy = this.policyFor(parsed.marketCode);
+    const policy = await this.policyFor(parsed.marketCode);
     if (parsed.daysValid > policy.maxPrescriptionDaysValid) {
       throw new BadRequestException(
         `daysValid ${parsed.daysValid} excede o máximo regulatório de ${policy.maxPrescriptionDaysValid} dias para o mercado ${parsed.marketCode}`,
@@ -176,14 +176,14 @@ export class PrescriptionDigitalService {
     return record;
   }
 
-  validate(input: unknown): EPrescriptionValidationResult {
+  async validate(input: unknown): Promise<EPrescriptionValidationResult> {
     const parsed = validateEPrescriptionInputSchema.parse(input);
     const record = this.getScopedPrescription(
       parsed.organizationId,
       parsed.marketCode,
       parsed.prescriptionId,
     );
-    const policy = this.policyFor(parsed.marketCode);
+    const policy = await this.policyFor(parsed.marketCode);
     const reasons: string[] = [];
     if (record.status !== "ACTIVE") {
       reasons.push(`Receita em ${record.status}`);
@@ -260,7 +260,7 @@ export class PrescriptionDigitalService {
     return record;
   }
 
-  renew(input: unknown): EPrescription {
+  async renew(input: unknown): Promise<EPrescription> {
     const parsed = renewEPrescriptionInputSchema.parse(input);
     const record = this.getScopedPrescription(
       parsed.organizationId,
@@ -272,7 +272,7 @@ export class PrescriptionDigitalService {
         `Receita em ${record.status} não pode ser renovada`,
       );
     }
-    const policy = this.policyFor(parsed.marketCode);
+    const policy = await this.policyFor(parsed.marketCode);
     if (parsed.daysValid > policy.maxPrescriptionDaysValid) {
       throw new BadRequestException(
         `daysValid ${parsed.daysValid} excede o máximo regulatório de ${policy.maxPrescriptionDaysValid} dias para o mercado ${parsed.marketCode}`,

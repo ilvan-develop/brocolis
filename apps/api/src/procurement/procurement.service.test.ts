@@ -474,12 +474,12 @@ describe("SupplierService", () => {
     expect(svc.getById(ORG, MARKET, supplier.id).id).toBe(supplier.id);
   });
 
-  it("listByOrg paginates and scopes by org+market", () => {
+  it("listByOrg paginates and scopes by org+market", async () => {
     const svc = new SupplierService();
     svc.create({ organizationId: ORG, marketCode: MARKET, name: "A", slug: "a" });
     svc.create({ organizationId: ORG, marketCode: MARKET, name: "B", slug: "b" });
     svc.create({ organizationId: OTHER_ORG, marketCode: MARKET, name: "C", slug: "c" });
-    const result = svc.listByOrg(ORG, MARKET);
+    const result = await svc.listByOrg(ORG, MARKET);
     expect(result.total).toBe(2);
     expect(result.items).toHaveLength(2);
   });
@@ -1054,10 +1054,10 @@ describe("ProcurementService orchestration (RFQ → Quotation → PO → Approva
     );
   });
 
-  it("requestInvoiceSaftExport delegates to ComplianceService with type=PURCHASES", () => {
+  it("requestInvoiceSaftExport delegates to ComplianceService with type=PURCHASES", async () => {
     const { procurement, complianceService } = ctx;
     complianceService.upsertPolicy({ marketCode: MARKET, saftEnabled: true });
-    const job = procurement.requestInvoiceSaftExport({
+    const job = await procurement.requestInvoiceSaftExport({
       organizationId: ORG,
       marketCode: MARKET,
       requestedBy: "finance-user",
@@ -1067,7 +1067,7 @@ describe("ProcurementService orchestration (RFQ → Quotation → PO → Approva
     expect(job.type).toBe("PURCHASES");
     expect(job.status).toBe("QUEUED");
     expect(
-      complianceService.listSaftExports(ORG, MARKET).map((j) => j.id),
+      (await complianceService.listSaftExports(ORG, MARKET)).map((j: any) => j.id),
     ).toContain(job.id);
   });
 

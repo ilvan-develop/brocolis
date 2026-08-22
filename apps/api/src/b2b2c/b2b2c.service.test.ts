@@ -2,6 +2,29 @@ import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { describe, expect, it, vi } from "vitest";
 import { B2b2cService } from "./b2b2c.service.js";
 
+vi.mock("@brocolis/db", () => {
+  const store: Record<string, unknown> = {};
+  return {
+    database: () => ({
+      b2b2cOrder: {
+        create: ({ data }: any) => {
+          const record = { ...data, id: `c${Date.now().toString(36).padStart(12, "0")}`, createdAt: new Date(), updatedAt: new Date() };
+          return Promise.resolve(record);
+        },
+        findMany: () => Promise.resolve([]),
+        findUnique: () => Promise.resolve(null),
+        update: ({ where, data }: any) => {
+          const key = `order:${where.id}`;
+          const existing = store[key] as Record<string, unknown> | undefined;
+          const record = existing ? { ...existing, ...data } : { ...data, id: where.id };
+          store[key] = record;
+          return Promise.resolve(record);
+        },
+      },
+    }),
+  };
+});
+
 const ORG = "00000000-0000-4000-8000-000000000000";
 const ORG_OTHER = "00000000-0000-4000-8000-000000000001";
 const PHARMACY = "c000000000000000000000001";
