@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { database } from "@brocolis/db";
+import { nextCuid } from "../cuid.js";
 
 export type QuotationItemRecord = {
   productId: string;
@@ -47,145 +47,86 @@ const QT_TRANSITIONS: Partial<Record<QuotationStatus, QuotationStatus[]>> = {
   SUBMITTED: ["ACCEPTED", "REJECTED", "EXPIRED"],
 };
 
-type QuotationWithItems = {
-  id: string;
-  organizationId: string;
-  marketCode: string;
-  rfqId: string;
-  supplierId: string;
-  reference: string;
-  status: string;
-  totalAmountMinor: number;
-  currency: string;
-  validUntil?: Date;
-  notes?: string;
-  createdAt: Date;
-  updatedAt: Date;
-  items: {
-    productId: string;
-    quantity: number;
-    unitPriceMinor: number;
-    lineTotalMinor: number;
-    currency: string;
-  }[];
-};
-
 @Injectable()
 export class QuotationService {
-  async create(input: CreateQuotationInput): Promise<QuotationRecord> {
-    const id = `c${Date.now().toString(36).padStart(12, "0")}`;
+  private readonly quotations = new Map<string, QuotationRecord>();
+
+  create(input: CreateQuotationInput): QuotationRecord {
+    const id = nextCuid();
     const ref = `QT-${Date.now().toString(36).toUpperCase()}`;
     const now = new Date();
-    const record = await database().quotation.create({
-      data: {
-        id,
-        organizationId: input.organizationId,
-        marketCode: input.marketCode,
-        rfqId: input.rfqId,
-        supplierId: input.supplierId,
-        reference: ref,
-        status: "DRAFT",
-        totalAmountMinor: input.totalAmountMinor,
-        currency: input.currency ?? "AOA",
-        validUntil: input.validUntil,
-        notes: input.notes,
-        items: {
-          create: input.items.map((i) => ({
-            productId: i.productId,
-            quantity: i.quantity,
-            unitPriceMinor: i.unitPriceMinor,
-            lineTotalMinor: i.quantity * i.unitPriceMinor,
-            currency: input.currency ?? "AOA",
-          })),
-        },
-        createdAt: now,
-        updatedAt: now,
-      },
-      include: { items: true },
-    });
-    const qt = record as QuotationWithItems;
-    return {
-      ...qt,
-      items: qt.items.map((i) => ({
+    const record: QuotationRecord = {
+      id,
+      organizationId: input.organizationId,
+      marketCode: input.marketCode,
+      rfqId: input.rfqId,
+      supplierId: input.supplierId,
+      reference: ref,
+      status: "DRAFT",
+      totalAmountMinor: input.totalAmountMinor,
+      currency: input.currency ?? "AOA",
+      items: input.items.map((i) => ({
         productId: i.productId,
         quantity: i.quantity,
         unitPriceMinor: i.unitPriceMinor,
       })),
-    } as QuotationRecord;
+      createdAt: now,
+      updatedAt: now,
+      ...(input.validUntil ? { validUntil: input.validUntil } : {}),
+      ...(input.notes ? { notes: input.notes } : {}),
+    };
+    this.quotations.set(id, record);
+    return record;
   }
 
-  async getById(
+  getById(
     organizationId: string,
     marketCode: string,
     quotationId: string,
-  ): Promise<QuotationRecord> {
-    const qt = await database().quotation.findUnique({
-      where: { id: quotationId, organizationId, marketCode },
-      include: { items: true },
-    });
-    if (!qt) {
+  ): QuotationRecord {
+    const qt = this.quotations.get(quotationId);
+    if (
+      !qt ||
+      qt.organizationId !== organizationId ||
+      qt.marketCode !== marketCode
+    ) {
       throw new NotFoundException(`Cotação ${quotationId} não encontrada`);
     }
-    const q = qt as QuotationWithItems;
-    return {
-      ...q,
-      items: q.items.map((i) => ({
-        productId: i.productId,
-        quantity: i.quantity,
-        unitPriceMinor: i.unitPriceMinor,
-      })),
-    } as QuotationRecord;
+    return qt;
   }
 
-  async listByRfq(
+  listByRfq(
     organizationId: string,
     marketCode: string,
     rfqId: string,
-  ): Promise<QuotationRecord[]> {
-    const items = await database().quotation.findMany({
-      where: { organizationId, marketCode, rfqId },
-      include: { items: true },
-      orderBy: { createdAt: "desc" },
-    });
-    const typed = items as QuotationWithItems[];
-    return typed.map((qt) => {
-      const q = qt as QuotationWithItems;
-      return {
-        ...q,
-        items: q.items.map((i) => ({
-          productId: i.productId,
-          quantity: i.quantity,
-          unitPriceMinor: i.unitPriceMinor,
-        })),
-      };
-    }) as QuotationRecord[];
+  ): QuotationRecord[] {
+    return [...this.quotations.values()]
+      .filter(
+        (q) =>
+          q.organizationId === organizationId &&
+          q.marketCode === marketCode &&
+          q.rfqId === rfqId,
+      )
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
-  async advanceStatus(quotationId: string, to: QuotationStatus): Promise<QuotationRecord> {
-    const qt = await database().quotation.findUnique({ where: { id: quotationId } });
-    if (!qt) {
-      throw new NotFoundException(`Cotação ${quotationId} não encontrada`);
-    }
-    const from = qt.status as QuotationStatus;
+  /** Scoped por organizationId+marketCode (regra 3) — ver RfqService.advanceStatus. */
+  advanceStatus(
+    organizationId: string,
+    marketCode: string,
+    quotationId: string,
+    to: QuotationStatus,
+  ): QuotationRecord {
+    const qt = this.getById(organizationId, marketCode, quotationId);
+    const from = qt.status;
     const allowed = QT_TRANSITIONS[from];
     if (!allowed?.includes(to)) {
       throw new BadRequestException(
         `Transição de estado inválida: ${from} → ${to}`,
       );
     }
-    const updated = await database().quotation.update({
-      where: { id: quotationId },
-      data: { status: to, updatedAt: new Date() },
-      include: { items: true },
-    });
-    const q = updated as QuotationWithItems;
-    return {
-      ...q,
-      items: q.items.map((i) => ({
-        productId: i.productId,
-        quantity: i.quantity,
-        unitPriceMinor: i.unitPriceMinor,
-      })),
-    } as QuotationRecord;
+    qt.status = to;
+    qt.updatedAt = new Date();
+    return qt;
   }
 }

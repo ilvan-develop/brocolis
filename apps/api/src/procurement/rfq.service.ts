@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { database } from "@brocolis/db";
+import { nextCuid } from "../cuid.js";
 
 export type RfqRecord = {
   id: string;
@@ -46,94 +46,93 @@ const RFQ_TRANSITIONS: Partial<Record<RfqStatus, RfqStatus[]>> = {
 
 @Injectable()
 export class RfqService {
-  async create(input: CreateRfqInput): Promise<RfqRecord> {
-    const id = `c${Date.now().toString(36).padStart(12, "0")}`;
+  private readonly rfqs = new Map<string, RfqRecord>();
+
+  create(input: CreateRfqInput): RfqRecord {
+    const id = nextCuid();
     const ref = `RFQ-${Date.now().toString(36).toUpperCase()}`;
     const now = new Date();
-    const record = await database().rfq.create({
-      data: {
-        id,
-        organizationId: input.organizationId,
-        marketCode: input.marketCode,
-        supplierId: input.supplierId,
-        reference: ref,
-        subject: input.subject,
-        status: "DRAFT",
-        validUntil: input.validUntil,
-        notes: input.notes,
-        createdAt: now,
-        updatedAt: now,
-      },
-    });
-    return {
-      ...record,
-      validUntil: record.validUntil ?? undefined,
-      notes: record.notes ?? undefined,
-    } as RfqRecord;
+    const record: RfqRecord = {
+      id,
+      organizationId: input.organizationId,
+      marketCode: input.marketCode,
+      supplierId: input.supplierId,
+      reference: ref,
+      subject: input.subject,
+      status: "DRAFT",
+      createdAt: now,
+      updatedAt: now,
+      ...(input.validUntil ? { validUntil: input.validUntil } : {}),
+      ...(input.notes ? { notes: input.notes } : {}),
+    };
+    this.rfqs.set(id, record);
+    return record;
   }
 
-  async getById(
+  getById(
     organizationId: string,
     marketCode: string,
     rfqId: string,
-  ): Promise<RfqRecord> {
-    const rfq = await database().rfq.findUnique({
-      where: { id: rfqId, organizationId, marketCode },
-    });
-    if (!rfq) {
+  ): RfqRecord {
+    const rfq = this.rfqs.get(rfqId);
+    if (
+      !rfq ||
+      rfq.organizationId !== organizationId ||
+      rfq.marketCode !== marketCode
+    ) {
       throw new NotFoundException(`RFQ ${rfqId} não encontrado`);
     }
-    return rfq as RfqRecord;
+    return rfq;
   }
 
-  async listByOrg(input: ListRfqsInput): Promise<{
+  listByOrg(input: ListRfqsInput): {
     items: RfqRecord[];
     total: number;
     page: number;
     pageSize: number;
-  }> {
+  } {
     const page = input.page ?? 1;
     const pageSize = input.pageSize ?? 20;
-    const where: Record<string, unknown> = {
-      organizationId: input.organizationId,
-      marketCode: input.marketCode,
-    };
+    let filtered = [...this.rfqs.values()].filter(
+      (r) =>
+        r.organizationId === input.organizationId &&
+        r.marketCode === input.marketCode,
+    );
     if (input.status) {
-      where.status = input.status;
+      filtered = filtered.filter((r) => r.status === input.status);
     }
-    const [items, total] = await Promise.all([
-      database().rfq.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-      database().rfq.count({ where }),
-    ]);
+    filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    const total = filtered.length;
+    const start = (page - 1) * pageSize;
     return {
-      items: items as RfqRecord[],
+      items: filtered.slice(start, start + pageSize),
       total,
       page,
       pageSize,
     };
   }
 
-  async advanceStatus(rfqId: string, to: RfqStatus): Promise<RfqRecord> {
-    const rfq = await database().rfq.findUnique({ where: { id: rfqId } });
-    if (!rfq) {
-      throw new NotFoundException(`RFQ ${rfqId} não encontrado`);
-    }
-    const from = rfq.status as RfqStatus;
+  /**
+   * Scoped por organizationId+marketCode (regra 3) — usa getById para que
+   * uma tentativa cross-tenant resulte em 404, nunca num 400 que confirme
+   * a existência do recurso noutra organização.
+   */
+  advanceStatus(
+    organizationId: string,
+    marketCode: string,
+    rfqId: string,
+    to: RfqStatus,
+  ): RfqRecord {
+    const rfq = this.getById(organizationId, marketCode, rfqId);
+    const from = rfq.status;
     const allowed = RFQ_TRANSITIONS[from];
     if (!allowed?.includes(to)) {
       throw new BadRequestException(
         `Transição de estado inválida: ${from} → ${to}`,
       );
     }
-    const updated = await database().rfq.update({
-      where: { id: rfqId },
-      data: { status: to, updatedAt: new Date() },
-    });
-    return updated as RfqRecord;
+    rfq.status = to;
+    rfq.updatedAt = new Date();
+    return rfq;
   }
 }
