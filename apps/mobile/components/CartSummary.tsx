@@ -1,3 +1,4 @@
+import { formatCurrency } from "@brocolis/formatters";
 import { Text, View } from "react-native";
 import { cn } from "@/lib/utils";
 
@@ -20,8 +21,7 @@ export function CartSummary({
   total,
   className,
 }: CartSummaryProps) {
-  const format = (amount: number) =>
-    `${amount.toLocaleString("pt-PT")} ${currency === "AOA" ? "Kz" : currency}`;
+  const format = (amount: number) => formatCurrency(amount, currency);
 
   return (
     <View

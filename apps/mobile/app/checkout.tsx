@@ -1,11 +1,13 @@
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { CartSummary } from "@/components/CartSummary";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
+import { enqueueOrder, isNetworkError } from "@/lib/order-queue";
 import { t } from "@/lib/t";
 import { useCartStore } from "@/stores/cart-store";
 
@@ -17,12 +19,13 @@ export default function CheckoutScreen() {
   const router = useRouter();
   const { items, total, clearCart } = useCartStore();
   const [step, setStep] = useState<CheckoutStep>("client");
-  const [clientName, _setClientName] = useState("");
-  const [clientPhone, _setClientPhone] = useState("");
-  const [addressLine, _setAddressLine] = useState("");
-  const [city, _setCity] = useState("");
-  const [referencePoint, _setReferencePoint] = useState("");
-  const [paymentMethod, _setPaymentMethod] = useState<string>("COD");
+  const [clientName, setClientName] = useState("");
+  const [clientPhone, setClientPhone] = useState("");
+  const [addressLine, setAddressLine] = useState("");
+  const [city, setCity] = useState("");
+  const [referencePoint, setReferencePoint] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<string>("COD");
+  const [queuedOffline, setQueuedOffline] = useState(false);
 
   const createOrder = useMutation({
     mutationFn: () =>
@@ -42,6 +45,21 @@ export default function CheckoutScreen() {
     onSuccess: (order) => {
       clearCart();
       router.push(`/payment/${order.id}`);
+    },
+    onError: async (error) => {
+      if (!isNetworkError(error)) return;
+      await enqueueOrder({
+        organizationId: ORG_ID,
+        marketCode: "AO",
+        items: items.map((i) => ({
+          productId: i.productId,
+          pharmacyId: i.pharmacyId,
+          quantity: i.quantity,
+        })),
+        deliveryAddress: { zone: "urban", addressLine, city, referencePoint },
+      });
+      clearCart();
+      setQueuedOffline(true);
     },
   });
 
@@ -82,32 +100,20 @@ export default function CheckoutScreen() {
               {t("checkout.client.title")}
             </Text>
             <View className="gap-3">
-              <View className="gap-1.5">
-                <Text className="text-sm font-medium text-foreground">
-                  {t("checkout.client.name")}
-                </Text>
-                <View className="h-12 rounded-xl border border-input bg-background px-4">
-                  <Text
-                    className="h-full justify-center text-base text-foreground"
-                    numberOfLines={1}
-                  >
-                    {clientName || t("checkout.client.name")}
-                  </Text>
-                </View>
-              </View>
-              <View className="gap-1.5">
-                <Text className="text-sm font-medium text-foreground">
-                  {t("checkout.client.phone")}
-                </Text>
-                <View className="h-12 rounded-xl border border-input bg-background px-4">
-                  <Text
-                    className="h-full justify-center text-base text-foreground"
-                    numberOfLines={1}
-                  >
-                    {clientPhone || t("checkout.client.phone")}
-                  </Text>
-                </View>
-              </View>
+              <Input
+                label={t("checkout.client.name")}
+                placeholder={t("checkout.client.name")}
+                value={clientName}
+                onChangeText={setClientName}
+                autoCapitalize="words"
+              />
+              <Input
+                label={t("checkout.client.phone")}
+                placeholder={t("checkout.client.phone")}
+                value={clientPhone}
+                onChangeText={setClientPhone}
+                keyboardType="phone-pad"
+              />
             </View>
             <Button
               label={t("checkout.continue")}
@@ -123,45 +129,24 @@ export default function CheckoutScreen() {
               {t("delivery.address.title")}
             </Text>
             <View className="gap-3">
-              <View className="gap-1.5">
-                <Text className="text-sm font-medium text-foreground">
-                  {t("delivery.address.street")}
-                </Text>
-                <View className="h-12 rounded-xl border border-input bg-background px-4">
-                  <Text
-                    className="h-full justify-center text-base text-foreground"
-                    numberOfLines={1}
-                  >
-                    {addressLine || t("delivery.address.street")}
-                  </Text>
-                </View>
-              </View>
-              <View className="gap-1.5">
-                <Text className="text-sm font-medium text-foreground">
-                  {t("delivery.address.city")}
-                </Text>
-                <View className="h-12 rounded-xl border border-input bg-background px-4">
-                  <Text
-                    className="h-full justify-center text-base text-foreground"
-                    numberOfLines={1}
-                  >
-                    {city || t("delivery.address.city")}
-                  </Text>
-                </View>
-              </View>
-              <View className="gap-1.5">
-                <Text className="text-sm font-medium text-foreground">
-                  {t("delivery.address.referencePoint")}
-                </Text>
-                <View className="h-12 rounded-xl border border-input bg-background px-4">
-                  <Text
-                    className="h-full justify-center text-base text-foreground"
-                    numberOfLines={1}
-                  >
-                    {referencePoint || t("delivery.address.referencePoint")}
-                  </Text>
-                </View>
-              </View>
+              <Input
+                label={t("delivery.address.street")}
+                placeholder={t("delivery.address.street")}
+                value={addressLine}
+                onChangeText={setAddressLine}
+              />
+              <Input
+                label={t("delivery.address.city")}
+                placeholder={t("delivery.address.city")}
+                value={city}
+                onChangeText={setCity}
+              />
+              <Input
+                label={t("delivery.address.referencePoint")}
+                placeholder={t("delivery.address.referencePoint")}
+                value={referencePoint}
+                onChangeText={setReferencePoint}
+              />
             </View>
             <Button
               label={t("checkout.continue")}
@@ -179,8 +164,13 @@ export default function CheckoutScreen() {
             <View className="gap-2">
               {(["COD", "REFERENCE", "CARD", "MOBILE"] as const).map(
                 (method) => (
-                  <View
+                  <Pressable
                     key={method}
+                    onPress={() => setPaymentMethod(method)}
+                    accessibilityRole="radio"
+                    accessibilityState={{
+                      selected: paymentMethod === method,
+                    }}
                     className={`rounded-xl border p-4 ${
                       paymentMethod === method
                         ? "border-primary bg-primary/10"
@@ -202,7 +192,7 @@ export default function CheckoutScreen() {
                             ? t("payment.method.card")
                             : t("payment.method.mobile")}
                     </Text>
-                  </View>
+                  </Pressable>
                 ),
               )}
             </View>
@@ -240,16 +230,32 @@ export default function CheckoutScreen() {
               itemCount={items.length}
             />
 
-            <Button
-              label={createOrder.isPending ? "..." : t("checkout.placeOrder")}
-              onPress={() => createOrder.mutate()}
-              disabled={createOrder.isPending}
-            />
+            {queuedOffline ? (
+              <>
+                <Text className="text-sm font-medium text-primary">
+                  {t("orders.confirmation.description")}
+                </Text>
+                <Button
+                  label={t("orders.confirmation.back")}
+                  onPress={() => router.push("/")}
+                />
+              </>
+            ) : (
+              <>
+                <Button
+                  label={
+                    createOrder.isPending ? "..." : t("checkout.placeOrder")
+                  }
+                  onPress={() => createOrder.mutate()}
+                  disabled={createOrder.isPending}
+                />
 
-            {createOrder.isError && (
-              <Text className="text-sm text-destructive">
-                {t("error.generic")}
-              </Text>
+                {createOrder.isError && (
+                  <Text className="text-sm text-destructive">
+                    {t("error.generic")}
+                  </Text>
+                )}
+              </>
             )}
           </View>
         )}
