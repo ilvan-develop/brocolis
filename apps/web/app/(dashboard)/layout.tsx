@@ -26,3 +26,11 @@ export function DashboardProviders({ children }: { children: ReactNode }) {
     </QueryClientProvider>
   );
 }
+
+export default function DashboardLayout({
+  children,
+}: Readonly<{
+  children: ReactNode;
+}>) {
+  return <DashboardProviders>{children}</DashboardProviders>;
+}
