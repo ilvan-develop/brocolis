@@ -165,7 +165,30 @@
         "Testes unitários: web e mobile passam (mobile excepção pré-existente de jest/babel). api: 190 passed, 42 failed (serviços migrados sync→async, testes por actualizar).",
         "F0-F7 implementados e integrados em main."
       ]
+    },
+    "16README-MANUAIS": {
+      "date": "2026-08-22",
+      "category": "documentation",
+      "block": "DOCUMENTATION",
+      "evidence": [
+        "README.md raiz actualizado com visão geral, estrutura, gates, como correr cada app, como contribuir.",
+        "README.md criado para apps/api, apps/web, apps/mobile com pré-requisitos, setup, scripts, variáveis de ambiente, troubleshooting.",
+        "README.md criado para packages/* (auth, contracts, db, finpay, formatters, i18n, markets, observability, validation, ui).",
+        "Documentação de execução com comandos PowerShell exactos."
+      ]
+    },
+    "17FINPAY-INTEGRATION": {
+      "date": "2026-08-22",
+      "category": "implementation",
+      "block": "FINPAY-REAL",
+      "evidence": [
+        "Analisado projeto FinPay em C:\\Users\\Ilvan\\Desktop\\www\\finpay: bounded contexts (payments, settlement, ledger, billing, customers, kyc, ocr, aml, compliance, evidence, review).",
+        "Blueprint actualizado com secção 10 — Integração com FinPay (bounded contexts, contracts, adapter pattern, fluxos B2C e B2B).",
+        "Criado HttpFinPayAdapter em packages/finpay/src/http-adapter.ts para chamar FinPay real via HTTP.",
+        "PaymentsService actualizado para usar HttpFinPayAdapter quando FINPAY_API_URL está configurada, caso contrário usa mock.",
+        "Adicionadas variáveis de ambiente FINPAY_API_URL e FINPAY_API_KEY."
+      ]
     }
   },
-  "updatedAt": "2026-08-22T15:35:00.000Z"
+  "updatedAt": "2026-08-22T16:30:00.000Z"
 }

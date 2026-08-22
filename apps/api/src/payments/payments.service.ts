@@ -4,13 +4,14 @@ import {
 } from "@brocolis/contracts";
 import { database } from "@brocolis/db";
 import type { FinPayAdapter } from "@brocolis/finpay";
-import { finpay } from "@brocolis/finpay";
+import { finpay, HttpFinPayAdapter } from "@brocolis/finpay";
 import {
   BadRequestException,
   Injectable,
   NotFoundException,
   Optional,
 } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { nextCuid } from "../cuid.js";
 import type { OrdersService } from "../orders/orders.service.js";
 
@@ -59,9 +60,15 @@ export class PaymentsService {
   private readonly orders: OrdersService;
   private readonly adapter: FinPayAdapter;
 
-  constructor(orders: OrdersService, @Optional() adapter?: FinPayAdapter) {
+  constructor(orders: OrdersService, config: ConfigService, @Optional() adapter?: FinPayAdapter) {
     this.orders = orders;
-    this.adapter = adapter ?? finpay;
+    if (adapter) {
+      this.adapter = adapter;
+    } else {
+      const baseUrl = config.get<string>("FINPAY_API_URL");
+      const apiKey = config.get<string>("FINPAY_API_KEY");
+      this.adapter = baseUrl ? new HttpFinPayAdapter({ baseUrl, apiKey }) : finpay;
+    }
   }
 
   async createPayment(input: unknown): Promise<PaymentRecord> {

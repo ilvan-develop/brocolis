@@ -596,3 +596,85 @@ export async function withRetry<T>(
   throw lastError!;
 }
 ```
+
+---
+
+## 10. Integração com FinPay (processadora de pagamentos)
+
+### 10.1 Visão geral
+
+A **FinPay** (`C:\Users\Ilvan\Desktop\www\finpay`) é o bounded context responsável por todo o money movement da Brócolis. O Brócolis **nunca** processa pagamentos directamente; delega à FinPay via:
+
+- **Criação de PaymentIntent** — `POST /api/payments` (FinPay)
+- **Consulta de Intent** — `GET /api/payments/:id` (FinPay)
+- **Reembolso** — `POST /api/payments/:id/refund` (FinPay)
+- **Webhooks** — `POST /api/finpay/webhook` (Brócolis recebe `CONFIRMED`/`FAILED`)
+
+### 10.2 Bounded contexts da FinPay
+
+| Contexto | Responsabilidade |
+|----------|------------------|
+| `payments` | Criação, listagem e estado de PaymentIntents |
+| `settlement` | Liquidação e reconciliação |
+| `ledger` | Double-entry bookkeeping |
+| `billing` | Facturação e recibo |
+| `customers` | Onboarding e perfis de cliente |
+| `kyc` | Verificação de identidade |
+| `ocr` | Extração de dados de comprovativos |
+| `aml` | Anti-money laundering screening |
+| `compliance` | Políticas regulatórias por mercado (AGT Angola, SAF-T) |
+| `evidence` | Anexação de evidências a pagamentos |
+| `review` | Manual review queue (OCR → Compliance → Fraud → Trust → Decision) |
+
+### 10.3 Contracts partilhadas
+
+As contracts da FinPay (`packages/contracts/src/payment.ts`, `settlement.ts`, `ledger.ts`, etc.) definem:
+
+```ts
+// paymentContract.create.input
+{
+  organizationId: string;
+  clientReference: string;      // orderId na Brócolis
+  amount: { amount: number; currency: string };
+  method: "CARD" | "WALLET" | "REFERENCE" | "COD" | "MOBILE";
+  idempotencyKey: string;
+}
+```
+
+### 10.4 Adapter pattern na Brócolis
+
+A Brócolis usa **FinPayAdapter** (interface) com duas implementações:
+
+| Implementação | Quando usar |
+|---------------|-------------|
+| `FinPayMockProvider` | Dev/test local sem FinPay |
+| `HttpFinPayAdapter` | Produção ou staging com FinPay real |
+
+Configuração via variáveis de ambiente:
+
+```env
+FINPAY_API_URL=http://localhost:4001   # ou URL do FinPay real
+FINPAY_API_KEY=sk_...                  # opcional
+```
+
+### 10.5 Fluxo de pagamento B2C (F2)
+
+```
+Brócolis Order (PENDING)
+  → PaymentsService.createPayment()
+    → FinPayAdapter.createIntent()  [HTTP POST FinPay]
+      → PaymentIntent (PENDING)
+        ← webhook CONFIRMED/FAILED [HTTP POST Brócolis]
+          → PaymentsService.handleWebhook()
+            → OrdersService.advanceStatus(CONFIRMED)
+```
+
+### 10.6 Fluxo B2B (F4/F6)
+
+- **RFQ → Quotation → PurchaseOrder** usam `SettlementService` para liquidação.
+- O `ProcurementService` delega export SAF-T ao `ComplianceService` (que por sua vez pode usar a FinPay para gerar comprovativos de pagamento).
+
+### 10.7 Isolamento e tenancy
+
+- Toda a comunicação com FinPay inclui `organizationId` e `marketCode`.
+- O FinPay replica o isolamento por tenant; a Brócolis nunca envia dados de outras organizações no mesmo request.

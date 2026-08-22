@@ -191,4 +191,4 @@ export class FinPayMockProvider implements FinPayAdapter {
   }
 }
 
-export const finpay = new FinPayMockProvider();
+export { HttpFinPayAdapter, type HttpFinPayOptions } from "./http-adapter.js";
