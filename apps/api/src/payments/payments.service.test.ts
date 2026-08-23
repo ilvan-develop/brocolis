@@ -12,7 +12,7 @@ const orderId = "c000000000000000000000201";
 function setup() {
   const finpay = new FinPayMockProvider();
   const orders = new OrdersService();
-  const payments = new PaymentsService(orders, finpay);
+  const payments = new PaymentsService(orders, undefined, finpay);
   return { finpay, orders, payments };
 }
 

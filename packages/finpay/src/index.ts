@@ -27,7 +27,7 @@ export type FinpayIntent = {
   amountMinor: number;
   currency: string;
   status: FinpayIntentStatus;
-  paymentMethod?: string;
+  paymentMethod: string | undefined;
   organizationId: string;
   marketCode: string;
   createdAt: string;
@@ -104,9 +104,7 @@ export class FinPayMockProvider implements FinPayAdapter {
       amountMinor: input.amountMinor,
       currency,
       status: "PENDING",
-      ...(input.paymentMethod != null && {
-        paymentMethod: input.paymentMethod,
-      }),
+      paymentMethod: input.paymentMethod ?? undefined,
       organizationId: input.organizationId,
       marketCode: input.marketCode,
       createdAt: new Date().toISOString(),
@@ -192,3 +190,5 @@ export class FinPayMockProvider implements FinPayAdapter {
 }
 
 export { HttpFinPayAdapter, type HttpFinPayOptions } from "./http-adapter.js";
+
+export const finpay = new FinPayMockProvider();

@@ -199,7 +199,22 @@
         "Script db:seed adicionado em packages/db/package.json.",
         "Seed usa upsert para evitar duplicação em execuções repetidas."
       ]
+    },
+    "19AUDITORIA-COMPLETA": {
+      "date": "2026-08-23",
+      "category": "audit",
+      "block": "FULL-AUDIT",
+      "evidence": [
+        "Graphify: grafo com 7165 nodes, relações entre blueprint/README.md, seed.ts, README.md, PaymentsService, HttpFinPayAdapter.",
+        "Typecheck: 14/14 pacotes verdes.",
+        "Build: @brocolis/finpay corrigido (exactOptionalPropertyTypes) e verde.",
+        "Testes unitários: web 238/238 verde; api 190/232 verde (42 falhas em procurement/prescription/compliance/b2b2c por migração sync→async); mobile 0/12 (issue pré-existente babel/jest).",
+        "Seed Prisma implementado e typecheck verde.",
+        "READMEs criados: root, api, web, mobile + packages/finpay/README.md.",
+        "Blueprint actualizado com secção 10 (FinPay integration).",
+        "Integração FinPay real via HttpFinPayAdapter + FINPAY_API_URL/FINPAY_API_KEY."
+      ]
     }
   },
-  "updatedAt": "2026-08-23T13:47:00.000Z"
+  "updatedAt": "2026-08-23T14:04:00.000Z"
 }
