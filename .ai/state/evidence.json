@@ -188,7 +188,18 @@
         "PaymentsService actualizado para usar HttpFinPayAdapter quando FINPAY_API_URL está configurada, caso contrário usa mock.",
         "Adicionadas variáveis de ambiente FINPAY_API_URL e FINPAY_API_KEY."
       ]
+    },
+    "18PRISMA-SEED": {
+      "date": "2026-08-23",
+      "category": "implementation",
+      "block": "DATABASE",
+      "evidence": [
+        "Criado packages/db/prisma/seed.ts com seed Prisma idempotente.",
+        "Seed cria: permissions (8 acções), organizations (4 orgs), users (4 perfis: admin, pharmacist, supplier, customer), members (4 membros com roles).",
+        "Script db:seed adicionado em packages/db/package.json.",
+        "Seed usa upsert para evitar duplicação em execuções repetidas."
+      ]
     }
   },
-  "updatedAt": "2026-08-22T16:30:00.000Z"
+  "updatedAt": "2026-08-23T13:47:00.000Z"
 }

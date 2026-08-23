@@ -111,9 +111,10 @@ Executa lint + typecheck + test:unit + build em sequência.
 ```powershell
 pnpm install
 Copy-Item -Path ".env.example" -Destination ".env"
-# Editar .env com os valores corretos (especialmente BETTER_AUTH_SECRET)
+# Editar .env com os valores corretos (especialmente BETTER_AUTH_SECRET, DATABASE_URL)
 pnpm db:generate
 pnpm db:migrate
+pnpm db:seed
 ```
 
 ### API (`apps/api`)
