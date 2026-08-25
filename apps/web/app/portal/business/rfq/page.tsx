@@ -1,7 +1,6 @@
 "use client";
 
-import { formatCurrency } from "@brocolis/formatters";
-import { tF4, type F4MessageKey } from "@brocolis/i18n";
+import { type F4MessageKey, tF4 } from "@brocolis/i18n";
 import { Badge } from "@brocolis/ui/components/badge";
 import {
   Card,
@@ -12,8 +11,8 @@ import {
 } from "@brocolis/ui/components/card";
 import { Skeleton } from "@brocolis/ui/components/skeleton";
 import { useQuery } from "@tanstack/react-query";
-import { listRfqs } from "@/lib/procurement";
 import { useSession } from "@/hooks/use-session";
+import { listRfqs } from "@/lib/procurement";
 
 const RFQ_STATUS_VARIANT: Record<
   "DRAFT" | "OPEN" | "QUOTED" | "AWARDED" | "CANCELED" | "EXPIRED",
@@ -89,13 +88,13 @@ export default function BusinessRfqPage() {
               <tbody>
                 {data?.items.map((rfq) => (
                   <tr key={rfq.id} className="border-b last:border-0">
-                    <td className="py-2 pr-4 font-medium">
-                      {rfq.reference}
-                    </td>
+                    <td className="py-2 pr-4 font-medium">{rfq.reference}</td>
                     <td className="py-2 pr-4">{rfq.subject}</td>
                     <td className="py-2">
                       <Badge variant={RFQ_STATUS_VARIANT[rfq.status]}>
-                        {tF4(`procurement.status.${rfq.status}` as F4MessageKey)}
+                        {tF4(
+                          `procurement.status.${rfq.status}` as F4MessageKey,
+                        )}
                       </Badge>
                     </td>
                   </tr>

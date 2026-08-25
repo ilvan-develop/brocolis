@@ -53,7 +53,10 @@ function makeProcurementServices() {
 }
 
 /** Cria um fornecedor real (as demais entidades exigem um supplierId válido e scoped). */
-function makeSupplier(procurement: ProcurementService, name = "Fornecedor A") {
+async function makeSupplier(
+  procurement: ProcurementService,
+  name = "Fornecedor A",
+) {
   return procurement.createSupplier({
     organizationId: ORG,
     marketCode: MARKET,
@@ -109,9 +112,9 @@ describe("RfqService", () => {
       supplierId: SUP,
       subject: "Teste",
     });
-    expect(() =>
-      svc.advanceStatus(OTHER_ORG, MARKET, rfq.id, "OPEN"),
-    ).toThrow(NotFoundException);
+    expect(() => svc.advanceStatus(OTHER_ORG, MARKET, rfq.id, "OPEN")).toThrow(
+      NotFoundException,
+    );
   });
 
   it("getById respects tenant scope", () => {
@@ -346,8 +349,16 @@ describe("ApprovalService", () => {
     const svc = new ApprovalService();
     const a1 = svc.create("po-1", "user-1", 1);
     const a2 = svc.create("po-1", "user-2", 2);
-    svc.decide({ approvalId: a1.id, decision: "APPROVED", approverId: "user-1" });
-    svc.decide({ approvalId: a2.id, decision: "APPROVED", approverId: "user-2" });
+    svc.decide({
+      approvalId: a1.id,
+      decision: "APPROVED",
+      approverId: "user-1",
+    });
+    svc.decide({
+      approvalId: a2.id,
+      decision: "APPROVED",
+      approverId: "user-2",
+    });
     expect(svc.hasApproval("po-1")).toBe(true);
   });
 
@@ -476,9 +487,24 @@ describe("SupplierService", () => {
 
   it("listByOrg paginates and scopes by org+market", async () => {
     const svc = new SupplierService();
-    svc.create({ organizationId: ORG, marketCode: MARKET, name: "A", slug: "a" });
-    svc.create({ organizationId: ORG, marketCode: MARKET, name: "B", slug: "b" });
-    svc.create({ organizationId: OTHER_ORG, marketCode: MARKET, name: "C", slug: "c" });
+    svc.create({
+      organizationId: ORG,
+      marketCode: MARKET,
+      name: "A",
+      slug: "a",
+    });
+    svc.create({
+      organizationId: ORG,
+      marketCode: MARKET,
+      name: "B",
+      slug: "b",
+    });
+    svc.create({
+      organizationId: OTHER_ORG,
+      marketCode: MARKET,
+      name: "C",
+      slug: "c",
+    });
     const result = await svc.listByOrg(ORG, MARKET);
     expect(result.total).toBe(2);
     expect(result.items).toHaveLength(2);
@@ -715,15 +741,15 @@ describe("InvoiceService", () => {
 describe("ProcurementService orchestration (RFQ → Quotation → PO → Approval → Credit → Delivery → Invoice)", () => {
   let ctx: ReturnType<typeof makeProcurementServices>;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     ctx = makeProcurementServices();
   });
 
-  it("runs the full happy path end to end", () => {
+  it("runs the full happy path end to end", async () => {
     const { procurement } = ctx;
-    const supplier = makeSupplier(procurement);
+    const supplier = await makeSupplier(procurement);
 
-    const rfq = procurement.createRfq({
+    const rfq = await procurement.createRfq({
       organizationId: ORG,
       marketCode: MARKET,
       supplierId: supplier.id,
@@ -731,10 +757,10 @@ describe("ProcurementService orchestration (RFQ → Quotation → PO → Approva
     });
     expect(rfq.status).toBe("DRAFT");
 
-    procurement.submitRfq(ORG, MARKET, rfq.id);
-    expect(procurement.getRfq(ORG, MARKET, rfq.id).status).toBe("OPEN");
+    await procurement.submitRfq(ORG, MARKET, rfq.id);
+    expect((await procurement.getRfq(ORG, MARKET, rfq.id)).status).toBe("OPEN");
 
-    const quotation = procurement.createQuotation({
+    const quotation = await procurement.createQuotation({
       organizationId: ORG,
       marketCode: MARKET,
       rfqId: rfq.id,
@@ -743,15 +769,17 @@ describe("ProcurementService orchestration (RFQ → Quotation → PO → Approva
       items: [{ productId: PROD, quantity: 100, unitPriceMinor: 5000 }],
     });
 
-    procurement.submitQuotation(ORG, MARKET, quotation.id);
-    // Submeter a cotação avança a RFQ associada para QUOTED.
-    expect(procurement.getRfq(ORG, MARKET, rfq.id).status).toBe("QUOTED");
+    await procurement.submitQuotation(ORG, MARKET, quotation.id);
+    expect((await procurement.getRfq(ORG, MARKET, rfq.id)).status).toBe(
+      "QUOTED",
+    );
 
-    procurement.acceptQuotation(ORG, MARKET, quotation.id);
-    // Aceitar a cotação adjudica a RFQ.
-    expect(procurement.getRfq(ORG, MARKET, rfq.id).status).toBe("AWARDED");
+    await procurement.acceptQuotation(ORG, MARKET, quotation.id);
+    expect((await procurement.getRfq(ORG, MARKET, rfq.id)).status).toBe(
+      "AWARDED",
+    );
 
-    const po = procurement.createPurchaseOrder({
+    const po = await procurement.createPurchaseOrder({
       organizationId: ORG,
       marketCode: MARKET,
       quotationId: quotation.id,
@@ -769,14 +797,14 @@ describe("ProcurementService orchestration (RFQ → Quotation → PO → Approva
     });
     expect(po.status).toBe("DRAFT");
 
-    procurement.createCreditAccount({
+    await procurement.createCreditAccount({
       organizationId: ORG,
       marketCode: MARKET,
       supplierId: supplier.id,
       creditLimitMinor: 1000000,
     });
 
-    const { po: pendingPo, approvals } = procurement.submitForApproval(
+    const { po: pendingPo, approvals } = await procurement.submitForApproval(
       ORG,
       MARKET,
       po.id,
@@ -785,44 +813,44 @@ describe("ProcurementService orchestration (RFQ → Quotation → PO → Approva
     expect(pendingPo.status).toBe("PENDING_APPROVAL");
     expect(approvals).toHaveLength(2);
 
-    // Uma única aprovação (de duas) não deve mover a PO para APPROVED ainda.
-    procurement.decideApproval(
+    await procurement.decideApproval(
       ORG,
       MARKET,
       approvals[0]?.id ?? "",
       "APPROVED",
       "approver-1",
     );
-    expect(procurement.getPurchaseOrder(ORG, MARKET, po.id).status).toBe(
-      "PENDING_APPROVAL",
-    );
+    expect(
+      (await procurement.getPurchaseOrder(ORG, MARKET, po.id)).status,
+    ).toBe("PENDING_APPROVAL");
 
-    // A segunda aprovação completa o workflow e avança a PO.
-    procurement.decideApproval(
+    await procurement.decideApproval(
       ORG,
       MARKET,
       approvals[1]?.id ?? "",
       "APPROVED",
       "approver-2",
     );
-    expect(procurement.getPurchaseOrder(ORG, MARKET, po.id).status).toBe(
-      "APPROVED",
-    );
+    expect(
+      (await procurement.getPurchaseOrder(ORG, MARKET, po.id)).status,
+    ).toBe("APPROVED");
 
-    const confirmed = procurement.confirmPurchaseOrder(ORG, MARKET, po.id);
+    const confirmed = await procurement.confirmPurchaseOrder(
+      ORG,
+      MARKET,
+      po.id,
+    );
     expect(confirmed.status).toBe("CONFIRMED");
-    // Crédito foi debitado ao confirmar.
     expect(procurement.getCreditAccount(ORG, supplier.id)?.balanceMinor).toBe(
       500000,
     );
 
-    procurement.advancePoDelivery(ORG, MARKET, po.id, "IN_DELIVERY");
-    procurement.advancePoDelivery(ORG, MARKET, po.id, "DELIVERED");
-    // Crédito é libertado ao entregar.
+    await procurement.advancePoDelivery(ORG, MARKET, po.id, "IN_DELIVERY");
+    await procurement.advancePoDelivery(ORG, MARKET, po.id, "DELIVERED");
     expect(procurement.getCreditAccount(ORG, supplier.id)?.balanceMinor).toBe(
       0,
     );
-    const completed = procurement.advancePoDelivery(
+    const completed = await procurement.advancePoDelivery(
       ORG,
       MARKET,
       po.id,
@@ -830,12 +858,11 @@ describe("ProcurementService orchestration (RFQ → Quotation → PO → Approva
     );
     expect(completed.status).toBe("COMPLETED");
 
-    const invoice = procurement.issueInvoice(ORG, MARKET, po.id);
+    const invoice = await procurement.issueInvoice(ORG, MARKET, po.id);
     expect(invoice.status).toBe("ISSUED");
     expect(invoice.totalAmountMinor).toBe(500000);
-    expect(procurement.listInvoices(ORG, MARKET)).toHaveLength(1);
+    expect(await procurement.listInvoices(ORG, MARKET)).toHaveLength(1);
 
-    // Todas as mutações críticas devem ter deixado rasto de auditoria.
     const actions = procurement.getAuditEvents().map((e) => e.action);
     expect(actions).toContain("procurement.po.confirmed");
     expect(actions).toContain("procurement.po.approved");
@@ -843,10 +870,10 @@ describe("ProcurementService orchestration (RFQ → Quotation → PO → Approva
     expect(actions).toContain("procurement.invoice.issued");
   });
 
-  it("blocks confirmPurchaseOrder when the PO is not fully approved", () => {
+  it("blocks confirmPurchaseOrder when the PO is not fully approved", async () => {
     const { procurement } = ctx;
-    const supplier = makeSupplier(procurement);
-    const po = procurement.createPurchaseOrder({
+    const supplier = await makeSupplier(procurement);
+    const po = await procurement.createPurchaseOrder({
       organizationId: ORG,
       marketCode: MARKET,
       supplierId: supplier.id,
@@ -861,28 +888,26 @@ describe("ProcurementService orchestration (RFQ → Quotation → PO → Approva
         },
       ],
     });
-    procurement.createCreditAccount({
+    await procurement.createCreditAccount({
       organizationId: ORG,
       marketCode: MARKET,
       supplierId: supplier.id,
       creditLimitMinor: 1000000,
     });
-    // PO ainda em DRAFT — nem sequer está aprovável.
-    expect(() =>
-      procurement.confirmPurchaseOrder(ORG, MARKET, po.id),
-    ).toThrow(BadRequestException);
+    expect(() => procurement.confirmPurchaseOrder(ORG, MARKET, po.id)).toThrow(
+      BadRequestException,
+    );
 
-    procurement.submitForApproval(ORG, MARKET, po.id, ["approver-1"]);
-    // PENDING_APPROVAL, sem decisão ainda — continua bloqueado.
-    expect(() =>
-      procurement.confirmPurchaseOrder(ORG, MARKET, po.id),
-    ).toThrow(BadRequestException);
+    await procurement.submitForApproval(ORG, MARKET, po.id, ["approver-1"]);
+    expect(() => procurement.confirmPurchaseOrder(ORG, MARKET, po.id)).toThrow(
+      BadRequestException,
+    );
   });
 
-  it("blocks confirmPurchaseOrder when the credit limit is insufficient", () => {
+  it("blocks confirmPurchaseOrder when the credit limit is insufficient", async () => {
     const { procurement } = ctx;
-    const supplier = makeSupplier(procurement);
-    const po = procurement.createPurchaseOrder({
+    const supplier = await makeSupplier(procurement);
+    const po = await procurement.createPurchaseOrder({
       organizationId: ORG,
       marketCode: MARKET,
       supplierId: supplier.id,
@@ -897,38 +922,40 @@ describe("ProcurementService orchestration (RFQ → Quotation → PO → Approva
         },
       ],
     });
-    procurement.createCreditAccount({
+    await procurement.createCreditAccount({
       organizationId: ORG,
       marketCode: MARKET,
       supplierId: supplier.id,
-      creditLimitMinor: 500000, // menor que o total da PO
+      creditLimitMinor: 500000,
     });
-    const { approvals } = procurement.submitForApproval(ORG, MARKET, po.id, [
-      "approver-1",
-    ]);
-    procurement.decideApproval(
+    const { approvals } = await procurement.submitForApproval(
+      ORG,
+      MARKET,
+      po.id,
+      ["approver-1"],
+    );
+    await procurement.decideApproval(
       ORG,
       MARKET,
       approvals[0]?.id ?? "",
       "APPROVED",
       "approver-1",
     );
-    expect(procurement.getPurchaseOrder(ORG, MARKET, po.id).status).toBe(
-      "APPROVED",
+    expect(
+      (await procurement.getPurchaseOrder(ORG, MARKET, po.id)).status,
+    ).toBe("APPROVED");
+    expect(() => procurement.confirmPurchaseOrder(ORG, MARKET, po.id)).toThrow(
+      BadRequestException,
     );
-    expect(() =>
-      procurement.confirmPurchaseOrder(ORG, MARKET, po.id),
-    ).toThrow(BadRequestException);
-    // O crédito não deve ter sido debitado.
     expect(procurement.getCreditAccount(ORG, supplier.id)?.balanceMinor).toBe(
       0,
     );
   });
 
-  it("rejecting one approval level rejects the whole PO", () => {
+  it("rejecting one approval level rejects the whole PO", async () => {
     const { procurement } = ctx;
-    const supplier = makeSupplier(procurement);
-    const po = procurement.createPurchaseOrder({
+    const supplier = await makeSupplier(procurement);
+    const po = await procurement.createPurchaseOrder({
       organizationId: ORG,
       marketCode: MARKET,
       supplierId: supplier.id,
@@ -943,11 +970,13 @@ describe("ProcurementService orchestration (RFQ → Quotation → PO → Approva
         },
       ],
     });
-    const { approvals } = procurement.submitForApproval(ORG, MARKET, po.id, [
-      "approver-1",
-      "approver-2",
-    ]);
-    procurement.decideApproval(
+    const { approvals } = await procurement.submitForApproval(
+      ORG,
+      MARKET,
+      po.id,
+      ["approver-1", "approver-2"],
+    );
+    await procurement.decideApproval(
       ORG,
       MARKET,
       approvals[0]?.id ?? "",
@@ -955,22 +984,22 @@ describe("ProcurementService orchestration (RFQ → Quotation → PO → Approva
       "approver-1",
       "Fora do orçamento",
     );
-    expect(procurement.getPurchaseOrder(ORG, MARKET, po.id).status).toBe(
-      "REJECTED",
-    );
+    expect(
+      (await procurement.getPurchaseOrder(ORG, MARKET, po.id)).status,
+    ).toBe("REJECTED");
   });
 
-  it("createPurchaseOrder requires the linked quotation to be ACCEPTED", () => {
+  it("createPurchaseOrder requires the linked quotation to be ACCEPTED", async () => {
     const { procurement } = ctx;
-    const supplier = makeSupplier(procurement);
-    const rfq = procurement.createRfq({
+    const supplier = await makeSupplier(procurement);
+    const rfq = await procurement.createRfq({
       organizationId: ORG,
       marketCode: MARKET,
       supplierId: supplier.id,
       subject: "Teste",
     });
-    procurement.submitRfq(ORG, MARKET, rfq.id);
-    const quotation = procurement.createQuotation({
+    await procurement.submitRfq(ORG, MARKET, rfq.id);
+    const quotation = await procurement.createQuotation({
       organizationId: ORG,
       marketCode: MARKET,
       rfqId: rfq.id,
@@ -978,7 +1007,6 @@ describe("ProcurementService orchestration (RFQ → Quotation → PO → Approva
       totalAmountMinor: 10000,
       items: [{ productId: PROD, quantity: 1, unitPriceMinor: 10000 }],
     });
-    // Cotação ainda em DRAFT (nem submetida) — não pode gerar PO.
     expect(() =>
       procurement.createPurchaseOrder({
         organizationId: ORG,
@@ -999,10 +1027,10 @@ describe("ProcurementService orchestration (RFQ → Quotation → PO → Approva
     ).toThrow(BadRequestException);
   });
 
-  it("decideApproval rejects cross-tenant approval ids with 404", () => {
+  it("decideApproval rejects cross-tenant approval ids with 404", async () => {
     const { procurement } = ctx;
-    const supplier = makeSupplier(procurement);
-    const po = procurement.createPurchaseOrder({
+    const supplier = await makeSupplier(procurement);
+    const po = await procurement.createPurchaseOrder({
       organizationId: ORG,
       marketCode: MARKET,
       supplierId: supplier.id,
@@ -1017,9 +1045,12 @@ describe("ProcurementService orchestration (RFQ → Quotation → PO → Approva
         },
       ],
     });
-    const { approvals } = procurement.submitForApproval(ORG, MARKET, po.id, [
-      "approver-1",
-    ]);
+    const { approvals } = await procurement.submitForApproval(
+      ORG,
+      MARKET,
+      po.id,
+      ["approver-1"],
+    );
     expect(() =>
       procurement.decideApproval(
         OTHER_ORG,
@@ -1031,10 +1062,10 @@ describe("ProcurementService orchestration (RFQ → Quotation → PO → Approva
     ).toThrow(NotFoundException);
   });
 
-  it("issueInvoice rejects a PO that has not been delivered yet", () => {
+  it("issueInvoice rejects a PO that has not been delivered yet", async () => {
     const { procurement } = ctx;
-    const supplier = makeSupplier(procurement);
-    const po = procurement.createPurchaseOrder({
+    const supplier = await makeSupplier(procurement);
+    const po = await procurement.createPurchaseOrder({
       organizationId: ORG,
       marketCode: MARKET,
       supplierId: supplier.id,
@@ -1056,7 +1087,10 @@ describe("ProcurementService orchestration (RFQ → Quotation → PO → Approva
 
   it("requestInvoiceSaftExport delegates to ComplianceService with type=PURCHASES", async () => {
     const { procurement, complianceService } = ctx;
-    complianceService.upsertPolicy({ marketCode: MARKET, saftEnabled: true });
+    await complianceService.upsertPolicy({
+      marketCode: MARKET,
+      saftEnabled: true,
+    });
     const job = await procurement.requestInvoiceSaftExport({
       organizationId: ORG,
       marketCode: MARKET,
@@ -1067,13 +1101,15 @@ describe("ProcurementService orchestration (RFQ → Quotation → PO → Approva
     expect(job.type).toBe("PURCHASES");
     expect(job.status).toBe("QUEUED");
     expect(
-      (await complianceService.listSaftExports(ORG, MARKET)).map((j: any) => j.id),
+      (await complianceService.listSaftExports(ORG, MARKET)).map(
+        (j: any) => j.id,
+      ),
     ).toContain(job.id);
   });
 
-  it("requestInvoiceSaftExport surfaces the policy error when SAF-T is disabled for the market", () => {
+  it("requestInvoiceSaftExport surfaces the policy error when SAF-T is disabled for the market", async () => {
     const { procurement } = ctx;
-    expect(() =>
+    await expect(
       procurement.requestInvoiceSaftExport({
         organizationId: ORG,
         marketCode: MARKET,
@@ -1081,13 +1117,13 @@ describe("ProcurementService orchestration (RFQ → Quotation → PO → Approva
         periodStart: new Date("2026-01-01"),
         periodEnd: new Date("2026-01-31"),
       }),
-    ).toThrow(BadRequestException);
+    ).rejects.toThrow(BadRequestException);
   });
 
-  it("calculatePrice reuses PricingService through the orchestrator", () => {
+  it("calculatePrice reuses PricingService through the orchestrator", async () => {
     const { procurement } = ctx;
-    const supplier = makeSupplier(procurement);
-    procurement.createPriceTier({
+    const supplier = await makeSupplier(procurement);
+    await procurement.createPriceTier({
       organizationId: ORG,
       marketCode: MARKET,
       supplierId: supplier.id,
@@ -1095,7 +1131,7 @@ describe("ProcurementService orchestration (RFQ → Quotation → PO → Approva
       minQty: 1,
       unitPriceMinor: 2000,
     });
-    const result = procurement.calculatePrice({
+    const result = await procurement.calculatePrice({
       organizationId: ORG,
       marketCode: MARKET,
       supplierId: supplier.id,

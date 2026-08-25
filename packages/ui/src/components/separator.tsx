@@ -12,7 +12,6 @@ function Separator({
   decorative?: boolean;
 }) {
   return (
-    // biome-ignore lint/a11y/useAriaPropsSupportedByRole: valid when role="separator"
     <div
       role={decorative ? "none" : "separator"}
       aria-orientation={decorative ? undefined : orientation}

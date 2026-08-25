@@ -3,11 +3,14 @@ import type {
   Cart,
   Category,
   GlobalProduct,
+  InventoryItem,
   Invitation,
   MarketOffer,
   Member,
   Order,
   Organization,
+  PharmacySettlement,
+  Prescription,
   SessionInfo,
   SignInInput,
   SignUpInput,
@@ -58,6 +61,8 @@ function jsonInit(method: string, body?: unknown): RequestInit {
   return init;
 }
 
+export { jsonInit };
+
 export function toQueryString(
   params: Record<string, string | number | boolean | undefined>,
 ): string {
@@ -104,7 +109,7 @@ export type GetOrderInput = {
   orderId: string;
 };
 
-async function request<T>(
+export async function request<T>(
   fetchImpl: ApiFetch,
   path: string,
   init: RequestInit,
@@ -147,6 +152,30 @@ export type ApiClient = {
     ) => Promise<CatalogSearchResponse>;
     getCart: (input: CommerceScope) => Promise<Cart | null>;
     getOrder: (input: GetOrderInput) => Promise<Order | null>;
+  };
+  pharmacy: {
+    listInventory: (input: {
+      organizationId: string;
+      marketCode: string;
+      limit?: number;
+    }) => Promise<InventoryItem[]>;
+    listOrders: (input: {
+      organizationId: string;
+      marketCode: string;
+      page?: number;
+      pageSize?: number;
+    }) => Promise<Order[]>;
+    listPrescriptions: (input: {
+      organizationId: string;
+      marketCode: string;
+      limit?: number;
+    }) => Promise<Prescription[]>;
+    computeSettlements: (input: {
+      organizationId: string;
+      marketCode: string;
+      periodStart?: string;
+      periodEnd?: string;
+    }) => Promise<PharmacySettlement>;
   };
 };
 
@@ -241,7 +270,7 @@ export function createApiClient(deps: ApiClientDeps = {}): ApiClient {
       searchCatalog: (input) =>
         request<CatalogSearchResponse>(
           fetchImpl,
-          `${baseUrl}/api/catalog?${toQueryString({
+          `${baseUrl}/api/catalog/search?${toQueryString({
             organizationId: input.organizationId,
             marketCode: input.marketCode,
             query: input.query,
@@ -299,6 +328,50 @@ export function createApiClient(deps: ApiClientDeps = {}): ApiClient {
         }
         return payload as Order;
       },
+    },
+    pharmacy: {
+      listInventory: (input) =>
+        request<InventoryItem[]>(
+          fetchImpl,
+          `${baseUrl}/api/inventory?${toQueryString({
+            organizationId: input.organizationId,
+            marketCode: input.marketCode,
+            limit: input.limit,
+          })}`,
+          jsonInit("GET"),
+        ),
+      listOrders: (input) =>
+        request<Order[]>(
+          fetchImpl,
+          `${baseUrl}/api/orders?${toQueryString({
+            organizationId: input.organizationId,
+            marketCode: input.marketCode,
+            page: input.page,
+            pageSize: input.pageSize,
+          })}`,
+          jsonInit("GET"),
+        ),
+      listPrescriptions: (input) =>
+        request<Prescription[]>(
+          fetchImpl,
+          `${baseUrl}/api/prescription-digital?${toQueryString({
+            organizationId: input.organizationId,
+            marketCode: input.marketCode,
+            limit: input.limit,
+          })}`,
+          jsonInit("GET"),
+        ),
+      computeSettlements: (input) =>
+        request<PharmacySettlement>(
+          fetchImpl,
+          `${baseUrl}/api/settlements/compute?${toQueryString({
+            organizationId: input.organizationId,
+            marketCode: input.marketCode,
+            periodStart: input.periodStart,
+            periodEnd: input.periodEnd,
+          })}`,
+          jsonInit("GET"),
+        ),
     },
   };
 }

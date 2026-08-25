@@ -18,7 +18,10 @@ export class ProcurementController {
 
   @Get("supplier")
   listSuppliers(@Query() query: OrgMarketQuery) {
-    return this.procurement.listSuppliers(query.organizationId, query.marketCode);
+    return this.procurement.listSuppliers(
+      query.organizationId,
+      query.marketCode,
+    );
   }
 
   @Get("supplier/:supplierId")
@@ -46,10 +49,7 @@ export class ProcurementController {
   }
 
   @Get("rfq/:rfqId")
-  getRfq(
-    @Param("rfqId") rfqId: string,
-    @Query() query: OrgMarketQuery,
-  ) {
+  getRfq(@Param("rfqId") rfqId: string, @Query() query: OrgMarketQuery) {
     return this.procurement.getRfq(
       query.organizationId,
       query.marketCode,
@@ -58,10 +58,7 @@ export class ProcurementController {
   }
 
   @Post("rfq/:rfqId/submit")
-  submitRfq(
-    @Param("rfqId") rfqId: string,
-    @Body() body: OrgMarketQuery,
-  ) {
+  submitRfq(@Param("rfqId") rfqId: string, @Body() body: OrgMarketQuery) {
     return this.procurement.submitRfq(
       body.organizationId,
       body.marketCode,
@@ -261,9 +258,7 @@ export class ProcurementController {
   }
 
   @Post("credit-account/check")
-  checkCredit(
-    @Body() body: Parameters<ProcurementService["checkCredit"]>[0],
-  ) {
+  checkCredit(@Body() body: Parameters<ProcurementService["checkCredit"]>[0]) {
     return this.procurement.checkCredit(body);
   }
 
@@ -306,10 +301,7 @@ export class ProcurementController {
   // ── Faturação B2B + AGT/SAF-T ─────────────────────────────────────────
 
   @Post("purchase-order/:poId/invoice")
-  issueInvoice(
-    @Param("poId") poId: string,
-    @Body() body: OrgMarketQuery,
-  ) {
+  issueInvoice(@Param("poId") poId: string, @Body() body: OrgMarketQuery) {
     return this.procurement.issueInvoice(
       body.organizationId,
       body.marketCode,
@@ -319,7 +311,10 @@ export class ProcurementController {
 
   @Get("invoice")
   listInvoices(@Query() query: OrgMarketQuery) {
-    return this.procurement.listInvoices(query.organizationId, query.marketCode);
+    return this.procurement.listInvoices(
+      query.organizationId,
+      query.marketCode,
+    );
   }
 
   @Get("invoice/:invoiceId")

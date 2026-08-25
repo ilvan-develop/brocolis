@@ -1,6 +1,8 @@
 "use client";
 
 import { tF6 } from "@brocolis/i18n";
+import { Badge } from "@brocolis/ui/components/badge";
+import { Button } from "@brocolis/ui/components/button";
 import {
   Card,
   CardContent,
@@ -8,11 +10,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@brocolis/ui/components/card";
-import { Badge } from "@brocolis/ui/components/badge";
-import { Button } from "@brocolis/ui/components/button";
 import { Skeleton } from "@brocolis/ui/components/skeleton";
-import { useComplianceDashboard } from "@/lib/compliance-query";
 import type { ComplianceDecision, SaFTExport } from "@/lib/compliance-fixtures";
+import { useComplianceDashboard } from "@/lib/compliance-query";
 
 const SUBJECT_LABEL: Record<string, string> = {
   HEALTHCARE_PROFESSIONAL: "compliance.subject.healthcare_professional",
@@ -22,7 +22,10 @@ const SUBJECT_LABEL: Record<string, string> = {
   E_PRESCRIPTION: "compliance.subject.e_prescription",
 };
 
-const DECISION_VARIANT: Record<string, "default" | "destructive" | "secondary"> = {
+const DECISION_VARIANT: Record<
+  string,
+  "default" | "destructive" | "secondary"
+> = {
   APPROVED: "default",
   REJECTED: "destructive",
   ESCALATED: "secondary",
@@ -60,9 +63,9 @@ export default function CompliancePage() {
   const decisions = data?.decisions ?? [];
   const saftExports = data?.saftExports ?? [];
 
-  const approved = decisions.filter((d) => d.decision === "APPROVED").length;
-  const rejected = decisions.filter((d) => d.decision === "REJECTED").length;
-  const escalated = decisions.filter((d) => d.decision === "ESCALATED").length;
+  const _approved = decisions.filter((d) => d.decision === "APPROVED").length;
+  const _rejected = decisions.filter((d) => d.decision === "REJECTED").length;
+  const _escalated = decisions.filter((d) => d.decision === "ESCALATED").length;
 
   return (
     <main className="flex min-h-screen flex-col gap-6 p-6">
@@ -143,7 +146,10 @@ export default function CompliancePage() {
                 >
                   <div className="flex flex-col">
                     <span className="text-sm font-medium">
-                      {tF6((SUBJECT_LABEL[decision.subject] ?? decision.subject) as any)}
+                      {tF6(
+                        (SUBJECT_LABEL[decision.subject] ??
+                          decision.subject) as Parameters<typeof tF6>[0],
+                      )}
                     </span>
                     <span className="text-muted-foreground text-xs">
                       {decision.reason}
@@ -190,7 +196,11 @@ export default function CompliancePage() {
                       {saft.periodEnd.toLocaleDateString()}
                     </span>
                   </div>
-                  <Badge variant={saft.status === "COMPLETED" ? "outline" : "secondary"}>
+                  <Badge
+                    variant={
+                      saft.status === "COMPLETED" ? "outline" : "secondary"
+                    }
+                  >
                     {saft.status}
                   </Badge>
                 </div>

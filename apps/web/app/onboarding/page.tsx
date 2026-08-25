@@ -14,6 +14,7 @@ import {
   nextStep,
   ONBOARDING_PORTALS,
   type OnboardingPortalId,
+  previousStep,
   selectPortal,
   setInvitees,
   setOrganization,
@@ -153,7 +154,7 @@ export default function OnboardingPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setState({ ...state, step: "portal" })}
+                  onClick={() => setState((current) => previousStep(current))}
                 >
                   {t("onboarding.back")}
                 </Button>

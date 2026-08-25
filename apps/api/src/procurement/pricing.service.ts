@@ -62,11 +62,6 @@ export type CalculatedPrice = {
   currency: string;
 };
 
-/**
- * F4 — Preços por Tier e Volume (ADR-0013): seleciona o PriceTier mais
- * específico aplicável à quantidade pedida, depois aplica o desconto de
- * VolumePrice elegível (basis points) sobre o preço unitário do tier.
- */
 @Injectable()
 export class PricingService {
   private readonly tiers = new Map<string, PriceTierRecord>();
@@ -75,9 +70,6 @@ export class PricingService {
   constructor(private readonly supplierService: SupplierService) {}
 
   createPriceTier(input: CreatePriceTierInput): PriceTierRecord {
-    // organizationId+marketCode obrigatórios (regra 3): validados via o
-    // fornecedor, que é o único dono transitivo do tier (schema Prisma
-    // não duplica organizationId/marketCode em PriceTier).
     this.supplierService.getById(
       input.organizationId,
       input.marketCode,
@@ -171,7 +163,6 @@ export class PricingService {
         `Nenhum tier de preço aplicável para o produto ${input.productId} (qtd ${input.quantity})`,
       );
     }
-    // Tier mais específico: o de minQty mais alto que ainda cobre a quantidade.
     const tier = candidateTiers.reduce((best, current) =>
       current.minQty > best.minQty ? current : best,
     );

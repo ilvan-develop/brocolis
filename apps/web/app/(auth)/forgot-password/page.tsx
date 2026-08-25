@@ -3,35 +3,33 @@
 import { t } from "@brocolis/i18n";
 import { Button } from "@brocolis/ui/components/button";
 import { Input } from "@brocolis/ui/components/input";
-import { Label } from "@brocolis/ui/components/label";
-import { type FormEvent, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import {
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/form";
 import { api } from "@/lib/api";
-import { validateEmailOnly } from "@/lib/validation";
+import { type ForgotPasswordInput, forgotPasswordSchema } from "@/lib/schemas";
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const form = useForm<ForgotPasswordInput>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: { email: "" },
+  });
   const [sent, setSent] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const result = validateEmailOnly(email);
-    if (!result.valid) {
-      setError(
-        result.errors.email === undefined ? null : t(result.errors.email),
-      );
-      return;
-    }
-    setError(null);
-    setSubmitting(true);
+  async function handleSubmit(values: ForgotPasswordInput) {
     try {
-      await api.auth.requestPasswordReset(email);
+      await api.auth.requestPasswordReset(values.email);
       setSent(true);
     } catch {
-      setError(t("error.generic"));
-    } finally {
-      setSubmitting(false);
+      setServerError(t("error.generic"));
     }
   }
 
@@ -45,31 +43,39 @@ export default function ForgotPasswordPage() {
         <p className="text-sm">{t("auth.forgot.sent")}</p>
       ) : (
         <form
-          onSubmit={handleSubmit}
+          onSubmit={form.handleSubmit(handleSubmit)}
           className="flex w-full flex-col gap-4"
           noValidate
         >
-          <div className="flex flex-col gap-2 text-left">
-            <Label htmlFor="forgot-email">{t("auth.signin.email")}</Label>
-            <Input
-              id="forgot-email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              aria-invalid={error !== null}
-              aria-describedby={
-                error !== null ? "forgot-email-error" : undefined
-              }
-            />
-            {error !== null && (
-              <p id="forgot-email-error" className="text-destructive text-sm">
-                {error}
-              </p>
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("auth.signin.email")}</FormLabel>
+                <FormControl>
+                  <Input
+                    id="forgot-email"
+                    type="email"
+                    autoComplete="email"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
-          </div>
-          <Button type="submit" disabled={submitting} className="w-full">
-            {t("auth.forgot.submit")}
+          />
+          {serverError && (
+            <p role="alert" className="text-destructive text-sm">
+              {serverError}
+            </p>
+          )}
+          <Button
+            type="submit"
+            disabled={form.formState.isSubmitting}
+            className="w-full"
+          >
+            {form.formState.isSubmitting ? "..." : t("auth.forgot.submit")}
           </Button>
         </form>
       )}

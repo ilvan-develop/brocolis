@@ -1,6 +1,6 @@
 "use client";
 
-import { tF4, type F4MessageKey } from "@brocolis/i18n";
+import { type F4MessageKey, tF4 } from "@brocolis/i18n";
 import { Badge } from "@brocolis/ui/components/badge";
 import {
   Card,
@@ -12,8 +12,8 @@ import {
 import { Skeleton } from "@brocolis/ui/components/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { notFound } from "next/navigation";
-import { getSupplier } from "@/lib/procurement";
 import { useSession } from "@/hooks/use-session";
+import { getSupplier } from "@/lib/procurement";
 
 const STATUS_VARIANT: Record<
   "ACTIVE" | "INACTIVE" | "SUSPENDED",
@@ -35,7 +35,11 @@ export default function SupplierDetailPage({
     marketCode: state.marketCode ?? "AO",
   };
 
-  const { data: supplier, isLoading, isError } = useQuery({
+  const {
+    data: supplier,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ["supplier", params.id, scope.organizationId, scope.marketCode],
     queryFn: () => getSupplier(scope, params.id),
     enabled: scope.organizationId.length > 0,
@@ -76,7 +80,9 @@ export default function SupplierDetailPage({
             {supplier.name}
           </h1>
           <Badge variant={STATUS_VARIANT[supplier.status]}>
-            {tF4(`procurement.supplier.${supplier.status.toLowerCase()}` as F4MessageKey)}
+            {tF4(
+              `procurement.supplier.${supplier.status.toLowerCase()}` as F4MessageKey,
+            )}
           </Badge>
         </div>
         <p className="text-muted-foreground text-sm">
@@ -129,7 +135,9 @@ export default function SupplierDetailPage({
                 </dt>
                 <dd>
                   <Badge variant={STATUS_VARIANT[supplier.status]}>
-            {tF4(`procurement.supplier.${supplier.status.toLowerCase()}` as F4MessageKey)}
+                    {tF4(
+                      `procurement.supplier.${supplier.status.toLowerCase()}` as F4MessageKey,
+                    )}
                   </Badge>
                 </dd>
               </div>

@@ -1,9 +1,9 @@
+import { database } from "@brocolis/db";
 import {
   BadRequestException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { database } from "@brocolis/db";
 
 export type CreditAccountRecord = {
   id: string;
@@ -37,7 +37,10 @@ export type CheckCreditInput = {
 export class CreditService {
   create(input: CreateCreditAccountInput): CreditAccountRecord {
     const existing = database().creditAccount.findFirst({
-      where: { organizationId: input.organizationId, supplierId: input.supplierId },
+      where: {
+        organizationId: input.organizationId,
+        supplierId: input.supplierId,
+      },
     });
     if (existing) {
       return existing as CreditAccountRecord;
@@ -63,7 +66,10 @@ export class CreditService {
     requestedMinor: number;
   } {
     const account = database().creditAccount.findFirst({
-      where: { organizationId: input.organizationId, supplierId: input.supplierId },
+      where: {
+        organizationId: input.organizationId,
+        supplierId: input.supplierId,
+      },
     });
     if (!account) {
       throw new NotFoundException(
@@ -107,7 +113,10 @@ export class CreditService {
     }
     const updated = database().creditAccount.update({
       where: { id: account.id },
-      data: { balanceMinor: account.balanceMinor + amountMinor, updatedAt: new Date() },
+      data: {
+        balanceMinor: account.balanceMinor + amountMinor,
+        updatedAt: new Date(),
+      },
     });
     return updated as CreditAccountRecord;
   }
@@ -125,7 +134,10 @@ export class CreditService {
     }
     const updated = database().creditAccount.update({
       where: { id: account.id },
-      data: { balanceMinor: Math.max(0, account.balanceMinor - amountMinor), updatedAt: new Date() },
+      data: {
+        balanceMinor: Math.max(0, account.balanceMinor - amountMinor),
+        updatedAt: new Date(),
+      },
     });
     return updated as CreditAccountRecord;
   }

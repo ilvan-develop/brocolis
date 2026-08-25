@@ -1,9 +1,10 @@
+import { database } from "@brocolis/db";
 import {
   BadRequestException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { database } from "@brocolis/db";
+import { nextCuid } from "../cuid.js";
 
 export type ApprovalRecord = {
   id: string;
@@ -31,7 +32,7 @@ export class ApprovalService {
     approverId: string,
     level = 1,
   ): ApprovalRecord {
-    const id = `ap-${Date.now().toString(36).padStart(12, "0")}`;
+    const id = nextCuid();
     const now = new Date();
     const record = database().approvalWorkflow.create({
       data: {

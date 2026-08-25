@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
-  testDir: "./tests",
+  testDir: ".",
   fullyParallel: true,
   reporter: "html",
   use: {
@@ -14,12 +14,18 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
-  webServer: process.env.CI
-    ? {
-        command: "pnpm --filter web build && pnpm --filter web start",
-        url: "http://localhost:3000",
-        reuseExistingServer: true,
-        timeout: 120_000,
-      }
-    : undefined,
+  webServer: [
+    {
+      command: "pnpm --filter api exec tsx src/main.ts",
+      url: "http://localhost:4000/api/health",
+      reuseExistingServer: true,
+      timeout: 120_000,
+    },
+    {
+      command: "pnpm --filter web dev",
+      url: "http://localhost:3000",
+      reuseExistingServer: true,
+      timeout: 120_000,
+    },
+  ],
 });

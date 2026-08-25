@@ -6,16 +6,25 @@ import {
   Headers,
   Patch,
   Post,
+  Query,
 } from "@nestjs/common";
-import type { CartService } from "./cart.service.js";
+import { CatalogService } from "../catalog/catalog.service.js";
+import { CartService } from "./cart.service.js";
 
 @Controller("cart")
 export class CartController {
-  constructor(private readonly cart: CartService) {}
+  private readonly cart: CartService;
+
+  constructor() {
+    this.cart = new CartService(new CatalogService());
+  }
 
   @Get()
-  get(@Headers("x-session-id") sessionId: string, @Body() body: unknown) {
-    return this.cart.get(sessionId, body);
+  get(
+    @Headers("x-session-id") sessionId: string,
+    @Query() query: Record<string, unknown>,
+  ) {
+    return this.cart.get(sessionId, query);
   }
 
   @Post("items")

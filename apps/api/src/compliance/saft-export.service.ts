@@ -1,6 +1,6 @@
+import type { SaftExportJob } from "@brocolis/contracts";
 import { database } from "@brocolis/db";
 import { Injectable, NotFoundException } from "@nestjs/common";
-import type { SaftExportJob } from "@brocolis/contracts";
 
 type OrderRow = {
   id: string;
@@ -343,10 +343,7 @@ function buildSaftXml(params: {
     );
   }
 
-  lines.push(
-    `    </SalesInvoices>`,
-    `    <Payments>`,
-  );
+  lines.push(`    </SalesInvoices>`, `    <Payments>`);
 
   for (const payment of payments) {
     lines.push(
@@ -362,11 +359,7 @@ function buildSaftXml(params: {
     );
   }
 
-  lines.push(
-    `    </Payments>`,
-    `  </SourceDocuments>`,
-    `</AuditFile>`,
-  );
+  lines.push(`    </Payments>`, `  </SourceDocuments>`, `</AuditFile>`);
 
   return lines.join("\n");
 }

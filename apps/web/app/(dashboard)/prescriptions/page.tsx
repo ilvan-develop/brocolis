@@ -1,7 +1,9 @@
 "use client";
 
-import { t } from "@brocolis/i18n";
+import type { PrescriptionStatus } from "@brocolis/contracts";
 import { formatDate } from "@brocolis/formatters";
+import { t } from "@brocolis/i18n";
+import { Badge } from "@brocolis/ui/components/badge";
 import { Button } from "@brocolis/ui/components/button";
 import {
   Card,
@@ -19,13 +21,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@brocolis/ui/components/dialog";
-import { Badge } from "@brocolis/ui/components/badge";
 import { Skeleton } from "@brocolis/ui/components/skeleton";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+  canActOnPrescription,
+  type PharmacyPrescription,
+  PRESCRIPTION_STATUS_KEY,
+  prescriptionStatusBadgeVariant,
+} from "@/lib/pharmacy-prescriptions";
 import { usePrescriptions } from "@/lib/prescriptions-query";
-import { canActOnPrescription, prescriptionStatusBadgeVariant, PRESCRIPTION_STATUS_KEY, type PharmacyPrescription } from "@/lib/pharmacy-prescriptions";
-import type { PrescriptionStatus } from "@brocolis/contracts";
 
 const DETAIL_LABELS: readonly {
   key:
@@ -72,8 +77,9 @@ export default function PrescriptionsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const selected =
-    prescriptions.find((prescription: PharmacyPrescription) => prescription.id === selectedId) ??
-    null;
+    prescriptions.find(
+      (prescription: PharmacyPrescription) => prescription.id === selectedId,
+    ) ?? null;
 
   function handleAction(id: string, action: "APPROVED" | "REJECTED") {
     respond(id, action, "Ação do dashboard");
@@ -198,8 +204,16 @@ export default function PrescriptionsPage() {
                       {prescription.patientName} · {prescription.medication}
                     </CardDescription>
                   </div>
-                  <Badge variant={prescriptionStatusBadgeVariant(prescription.status)}>
-                    {t(PRESCRIPTION_STATUS_KEY[prescription.status as PrescriptionStatus])}
+                  <Badge
+                    variant={prescriptionStatusBadgeVariant(
+                      prescription.status,
+                    )}
+                  >
+                    {t(
+                      PRESCRIPTION_STATUS_KEY[
+                        prescription.status as PrescriptionStatus
+                      ],
+                    )}
                   </Badge>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-2">
@@ -266,8 +280,14 @@ export default function PrescriptionsPage() {
               </DialogTitle>
               <DialogDescription>
                 {selected.reference} ·{" "}
-                <Badge variant={prescriptionStatusBadgeVariant(selected.status)}>
-                  {t(PRESCRIPTION_STATUS_KEY[selected.status as PrescriptionStatus])}
+                <Badge
+                  variant={prescriptionStatusBadgeVariant(selected.status)}
+                >
+                  {t(
+                    PRESCRIPTION_STATUS_KEY[
+                      selected.status as PrescriptionStatus
+                    ],
+                  )}
                 </Badge>
               </DialogDescription>
             </DialogHeader>

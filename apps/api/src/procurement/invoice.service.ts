@@ -94,7 +94,8 @@ export class InvoiceService {
   listByOrg(organizationId: string, marketCode: string): InvoiceRecord[] {
     return [...this.invoices.values()]
       .filter(
-        (i) => i.organizationId === organizationId && i.marketCode === marketCode,
+        (i) =>
+          i.organizationId === organizationId && i.marketCode === marketCode,
       )
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }

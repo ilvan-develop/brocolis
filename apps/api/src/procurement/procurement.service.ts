@@ -3,14 +3,14 @@ import { database } from "@brocolis/db";
 import { BadRequestException, Injectable } from "@nestjs/common";
 import type { ComplianceService } from "../compliance/compliance.service.js";
 import type { ApprovalService } from "./approval.service.js";
+import type { CreditService } from "./credit.service.js";
+import type { InvoiceService } from "./invoice.service.js";
 import type {
   CalculatePriceInput,
   CreatePriceTierInput,
   CreateVolumePriceInput,
+  PricingService,
 } from "./pricing.service.js";
-import type { CreditService } from "./credit.service.js";
-import type { InvoiceService } from "./invoice.service.js";
-import type { PricingService } from "./pricing.service.js";
 import type { PurchaseOrderService } from "./purchase-order.service.js";
 import type { QuotationService } from "./quotation.service.js";
 import type { RfqService } from "./rfq.service.js";
@@ -149,7 +149,10 @@ export class ProcurementService {
       action: "procurement.quotation.created",
       resourceType: "quotation",
       resourceId: quotation.id,
-      payload: { rfqId: quotation.rfqId, totalAmountMinor: quotation.totalAmountMinor },
+      payload: {
+        rfqId: quotation.rfqId,
+        totalAmountMinor: quotation.totalAmountMinor,
+      },
     });
     return quotation;
   }
@@ -180,7 +183,12 @@ export class ProcurementService {
       quotation.rfqId,
     );
     if (rfq.status === "OPEN") {
-      this.rfqService.advanceStatus(organizationId, marketCode, rfq.id, "QUOTED");
+      this.rfqService.advanceStatus(
+        organizationId,
+        marketCode,
+        rfq.id,
+        "QUOTED",
+      );
     }
     void this.emitAudit({
       organizationId,
@@ -212,7 +220,12 @@ export class ProcurementService {
       quotation.rfqId,
     );
     if (rfq.status === "QUOTED") {
-      this.rfqService.advanceStatus(organizationId, marketCode, rfq.id, "AWARDED");
+      this.rfqService.advanceStatus(
+        organizationId,
+        marketCode,
+        rfq.id,
+        "AWARDED",
+      );
     }
     void this.emitAudit({
       organizationId,
@@ -281,7 +294,10 @@ export class ProcurementService {
       action: "procurement.po.created",
       resourceType: "purchase_order",
       resourceId: po.id,
-      payload: { totalAmountMinor: po.totalAmountMinor, supplierId: po.supplierId },
+      payload: {
+        totalAmountMinor: po.totalAmountMinor,
+        supplierId: po.supplierId,
+      },
     });
     return po;
   }
@@ -416,7 +432,11 @@ export class ProcurementService {
    * Antes de confirmar a PO: exige aprovação completa e disponibilidade de
    * crédito (ADR-0013). Débito automático do CreditAccount ao confirmar.
    */
-  confirmPurchaseOrder(organizationId: string, marketCode: string, poId: string) {
+  confirmPurchaseOrder(
+    organizationId: string,
+    marketCode: string,
+    poId: string,
+  ) {
     const po = this.poService.getById(organizationId, marketCode, poId);
     if (po.status !== "APPROVED") {
       throw new BadRequestException(
@@ -439,7 +459,11 @@ export class ProcurementService {
         `Limite de crédito insuficiente para confirmar a PurchaseOrder ${poId}`,
       );
     }
-    this.creditService.debit(organizationId, po.supplierId, po.totalAmountMinor);
+    this.creditService.debit(
+      organizationId,
+      po.supplierId,
+      po.totalAmountMinor,
+    );
     const confirmed = this.poService.advanceStatus(
       organizationId,
       marketCode,
@@ -566,8 +590,16 @@ export class ProcurementService {
 
   // ── Faturação B2B + AGT/SAF-T ─────────────────────────────────────────
 
-  issueInvoice(organizationId: string, marketCode: string, purchaseOrderId: string) {
-    const po = this.poService.getById(organizationId, marketCode, purchaseOrderId);
+  issueInvoice(
+    organizationId: string,
+    marketCode: string,
+    purchaseOrderId: string,
+  ) {
+    const po = this.poService.getById(
+      organizationId,
+      marketCode,
+      purchaseOrderId,
+    );
     const invoice = this.invoiceService.issue(organizationId, marketCode, po);
     void this.emitAudit({
       organizationId,

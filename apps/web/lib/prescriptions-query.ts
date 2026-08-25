@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { PharmacyPrescription } from "./pharmacy-prescriptions";
 import {
   DEMO_PHARMACY_PRESCRIPTIONS,
@@ -16,7 +16,11 @@ export type PrescriptionsQuery = {
   isLoading: boolean;
   isError: boolean;
   refetch: () => void;
-  respond: (id: string, action: "APPROVED" | "REJECTED", notes: string | null) => void;
+  respond: (
+    id: string,
+    action: "APPROVED" | "REJECTED",
+    notes: string | null,
+  ) => void;
 };
 
 export function usePrescriptions(): PrescriptionsQuery {

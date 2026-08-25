@@ -1,6 +1,6 @@
 import { act } from "@testing-library/react-native";
-import { useAuthStore } from "@/stores/auth-store";
 import type { Session } from "@/lib/auth";
+import { useAuthStore } from "@/stores/auth-store";
 
 const session: Session = {
   userId: "user_1",

@@ -44,7 +44,9 @@ describe("ProductCard", () => {
   });
 
   it("shows an Rx badge when a prescription is required", () => {
-    render(<ProductCard offer={{ ...baseOffer, prescriptionRequired: true }} />);
+    render(
+      <ProductCard offer={{ ...baseOffer, prescriptionRequired: true }} />,
+    );
     expect(screen.getByText("Rx")).toBeTruthy();
   });
 

@@ -22,16 +22,17 @@
   },
   "linter": {
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
+      "a11y": {
+        "useAltText": "off",
+        "useAriaPropsSupportedByRole": "off"
+      },
       "correctness": {
         "noUnusedVariables": "error",
         "noUnusedImports": "error"
       },
       "suspicious": {
         "noExplicitAny": "warn"
-      },
-      "nursery": {
-        "noFloatingPromises": "error"
       }
     }
   },

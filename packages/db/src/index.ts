@@ -7,6 +7,7 @@
  */
 
 import type { PrismaClient as PrismaClientType } from "./generated/prisma/client.js";
+export { PrismaClient } from "./generated/prisma/client.js";
 
 let prisma: PrismaClientType | null = null;
 

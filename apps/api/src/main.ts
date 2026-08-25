@@ -1,10 +1,11 @@
+import "reflect-metadata";
 import { createLogger } from "@brocolis/observability";
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
 import helmet from "helmet";
 import "./observability/sentry.js";
-import { setupTelemetry } from "./telemetry/telemetry.module.js";
 import { AppModule } from "./app.module.js";
+import { setupTelemetry } from "./telemetry/telemetry.module.js";
 
 async function bootstrap() {
   setupTelemetry();

@@ -17,46 +17,46 @@ const baseEntry = {
 };
 
 describe("AuditService — record", () => {
-  it("records an event with id and at", () => {
+  it("records an event with id and at", async () => {
     const svc = new AuditService();
-    svc.record(baseEntry);
-    const all = svc.listAll(ORG, MARKET);
+    await svc.record(baseEntry);
+    const all = await svc.listAll(ORG, MARKET);
     expect(all).toHaveLength(1);
     expect(all[0]?.id).toMatch(/^c/);
     expect(all[0]?.at).toBeInstanceOf(Date);
     expect(all[0]?.action).toBe("b2b2c.order.created");
   });
 
-  it("records multiple events", () => {
+  it("records multiple events", async () => {
     const svc = new AuditService();
-    svc.record(baseEntry);
-    svc.record({ ...baseEntry, action: "b2b2c.pharmacy.confirmed" });
-    expect(svc.listAll(ORG, MARKET)).toHaveLength(2);
+    await svc.record(baseEntry);
+    await svc.record({ ...baseEntry, action: "b2b2c.pharmacy.confirmed" });
+    expect(await svc.listAll(ORG, MARKET)).toHaveLength(2);
   });
 });
 
 describe("AuditService — listAll", () => {
-  it("filters by organizationId and marketCode", () => {
+  it("filters by organizationId and marketCode", async () => {
     const svc = new AuditService();
-    svc.record(baseEntry);
-    svc.record({ ...baseEntry, organizationId: ORG_OTHER });
-    expect(svc.listAll(ORG, MARKET)).toHaveLength(1);
-    expect(svc.listAll(ORG_OTHER, MARKET)).toHaveLength(1);
+    await svc.record(baseEntry);
+    await svc.record({ ...baseEntry, organizationId: ORG_OTHER });
+    expect(await svc.listAll(ORG, MARKET)).toHaveLength(1);
+    expect(await svc.listAll(ORG_OTHER, MARKET)).toHaveLength(1);
   });
 
-  it("returns empty for unknown org", () => {
+  it("returns empty for unknown org", async () => {
     const svc = new AuditService();
-    svc.record(baseEntry);
-    expect(svc.listAll("nonexistent", MARKET)).toHaveLength(0);
+    await svc.record(baseEntry);
+    expect(await svc.listAll("nonexistent", MARKET)).toHaveLength(0);
   });
 });
 
 describe("AuditService — query", () => {
-  it("filters by action", () => {
+  it("filters by action", async () => {
     const svc = new AuditService();
-    svc.record(baseEntry);
-    svc.record({ ...baseEntry, action: "b2b2c.delivery.completed" });
-    const result = svc.query({
+    await svc.record(baseEntry);
+    await svc.record({ ...baseEntry, action: "b2b2c.delivery.completed" });
+    const result = await svc.query({
       organizationId: ORG,
       marketCode: MARKET,
       action: "b2b2c.order.created",
@@ -65,11 +65,11 @@ describe("AuditService — query", () => {
     expect(result[0]?.action).toBe("b2b2c.order.created");
   });
 
-  it("filters by subjectType (actorType)", () => {
+  it("filters by subjectType (actorType)", async () => {
     const svc = new AuditService();
-    svc.record({ ...baseEntry, actorType: "PHARMACY" });
-    svc.record({ ...baseEntry, actorType: "SUPPLIER" });
-    const result = svc.query({
+    await svc.record({ ...baseEntry, actorType: "PHARMACY" });
+    await svc.record({ ...baseEntry, actorType: "SUPPLIER" });
+    const result = await svc.query({
       organizationId: ORG,
       marketCode: MARKET,
       subjectType: "PHARMACY",
@@ -78,11 +78,11 @@ describe("AuditService — query", () => {
     expect(result[0]?.actorType).toBe("PHARMACY");
   });
 
-  it("filters by subjectId (resourceId)", () => {
+  it("filters by subjectId (resourceId)", async () => {
     const svc = new AuditService();
-    svc.record(baseEntry);
-    svc.record({ ...baseEntry, resourceId: "other-resource" });
-    const result = svc.query({
+    await svc.record(baseEntry);
+    await svc.record({ ...baseEntry, resourceId: "other-resource" });
+    const result = await svc.query({
       organizationId: ORG,
       marketCode: MARKET,
       subjectId: "c00000000000000000000001",
@@ -90,14 +90,14 @@ describe("AuditService — query", () => {
     expect(result).toHaveLength(1);
   });
 
-  it("filters by date range", () => {
+  it("filters by date range", async () => {
     const svc = new AuditService();
     const now = new Date();
     const past = new Date(now.getTime() - 100_000);
     const future = new Date(now.getTime() + 100_000);
 
-    svc.record(baseEntry);
-    const result = svc.query({
+    await svc.record(baseEntry);
+    const result = await svc.query({
       organizationId: ORG,
       marketCode: MARKET,
       from: past,
@@ -106,10 +106,10 @@ describe("AuditService — query", () => {
     expect(result).toHaveLength(1);
   });
 
-  it("returns empty when date range excludes events", () => {
+  it("returns empty when date range excludes events", async () => {
     const svc = new AuditService();
-    svc.record(baseEntry);
-    const result = svc.query({
+    await svc.record(baseEntry);
+    const result = await svc.query({
       organizationId: ORG,
       marketCode: MARKET,
       from: new Date(2099, 0, 1),
@@ -118,12 +118,12 @@ describe("AuditService — query", () => {
     expect(result).toHaveLength(0);
   });
 
-  it("combines multiple filters", () => {
+  it("combines multiple filters", async () => {
     const svc = new AuditService();
-    svc.record(baseEntry);
-    svc.record({ ...baseEntry, action: "b2b2c.delivery.completed" });
-    svc.record({ ...baseEntry, resourceId: "other" });
-    const result = svc.query({
+    await svc.record(baseEntry);
+    await svc.record({ ...baseEntry, action: "b2b2c.delivery.completed" });
+    await svc.record({ ...baseEntry, resourceId: "other" });
+    const result = await svc.query({
       organizationId: ORG,
       marketCode: MARKET,
       action: "b2b2c.order.created",
@@ -132,25 +132,25 @@ describe("AuditService — query", () => {
     expect(result).toHaveLength(1);
   });
 
-  it("rejects query with to before from", () => {
+  it("rejects query with to before from", async () => {
     const svc = new AuditService();
-    expect(() =>
+    await expect(
       svc.query({
         organizationId: ORG,
         marketCode: MARKET,
         from: new Date(2099, 0, 1),
         to: new Date(2020, 0, 1),
       }),
-    ).toThrow();
+    ).rejects.toThrow();
   });
 });
 
 describe("AuditService — exportCsv", () => {
-  it("generates CSV header and rows", () => {
+  it("generates CSV header and rows", async () => {
     const svc = new AuditService();
-    svc.record(baseEntry);
-    svc.record({ ...baseEntry, action: "b2b2c.pharmacy.confirmed" });
-    const entries = svc.listAll(ORG, MARKET);
+    await svc.record(baseEntry);
+    await svc.record({ ...baseEntry, action: "b2b2c.pharmacy.confirmed" });
+    const entries = await svc.listAll(ORG, MARKET);
     const csv = svc.exportCsv(entries);
     const lines = csv.split("\n");
     expect(lines[0]).toBe(
@@ -159,7 +159,7 @@ describe("AuditService — exportCsv", () => {
     expect(lines).toHaveLength(3);
   });
 
-  it("returns header only for empty entries", () => {
+  it("returns header only for empty entries", async () => {
     const svc = new AuditService();
     const csv = svc.exportCsv([]);
     const lines = csv.split("\n");

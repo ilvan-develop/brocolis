@@ -2,7 +2,7 @@ import { t } from "@brocolis/i18n";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { PharmacyNav } from "@/components/pharmacy/pharmacy-nav";
-import { PharmacyProviders } from "@/components/pharmacy/pharmacy-providers";
+import { QueryProviders } from "@/components/providers";
 
 export default function PharmacyLayout({
   children,
@@ -10,7 +10,7 @@ export default function PharmacyLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <PharmacyProviders>
+    <QueryProviders>
       <div className="flex min-h-screen flex-col">
         <header className="border-b">
           <div className="flex flex-col gap-4 px-6 py-4">
@@ -31,6 +31,6 @@ export default function PharmacyLayout({
         </header>
         <main className="flex flex-1 flex-col p-6">{children}</main>
       </div>
-    </PharmacyProviders>
+    </QueryProviders>
   );
 }

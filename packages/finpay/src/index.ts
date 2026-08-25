@@ -1,68 +1,13 @@
 import { randomBytes } from "node:crypto";
-
-export type FinpayIntentStatus =
-  | "PENDING"
-  | "PROCESSING"
-  | "CONFIRMED"
-  | "EXPIRED"
-  | "DECLINED"
-  | "FAILED"
-  | "REFUNDED";
-
-export type FinpayEventType = "CONFIRMED" | "FAILED";
-
-export type CreateIntentInput = {
-  orderId: string;
-  amountMinor: number;
-  currency?: string;
-  paymentMethod?: string;
-  organizationId: string;
-  marketCode: string;
-  idempotencyKey?: string;
-};
-
-export type FinpayIntent = {
-  intentId: string;
-  orderId: string;
-  amountMinor: number;
-  currency: string;
-  status: FinpayIntentStatus;
-  paymentMethod: string | undefined;
-  organizationId: string;
-  marketCode: string;
-  createdAt: string;
-};
-
-export type FinpayWebhookEvent = {
-  eventId: string;
-  eventType: FinpayEventType;
-  intentId: string;
-  orderId: string;
-  amountMinor: number;
-  currency: string;
-};
-
-export type FinPayStore = {
-  intents: Map<string, FinpayIntent>;
-  events: Map<string, FinpayWebhookEvent>;
-  byOrder: Map<string, string>;
-  byIdempotency: Map<string, string>;
-};
-
-export function createFinpayStore(): FinPayStore {
-  return {
-    intents: new Map(),
-    events: new Map(),
-    byOrder: new Map(),
-    byIdempotency: new Map(),
-  };
-}
-
-export interface FinPayAdapter {
-  createIntent(input: CreateIntentInput): Promise<FinpayIntent>;
-  getIntent(intentId: string): Promise<FinpayIntent>;
-  refund(intentId: string): Promise<FinpayIntent>;
-}
+import type {
+  CreateIntentInput,
+  FinpayEventType,
+  FinPayAdapter,
+  FinPayStore,
+  FinpayIntent,
+  FinpayWebhookEvent,
+} from "./types.js";
+import { createFinpayStore } from "./types.js";
 
 let sequence = 0;
 
@@ -189,6 +134,16 @@ export class FinPayMockProvider implements FinPayAdapter {
   }
 }
 
+export {
+  type CreateIntentInput,
+  type FinPayAdapter,
+  type FinPayStore,
+  type FinpayEventType,
+  type FinpayIntent,
+  type FinpayIntentStatus,
+  type FinpayWebhookEvent,
+  createFinpayStore,
+} from "./types.js";
 export { HttpFinPayAdapter, type HttpFinPayOptions } from "./http-adapter.js";
 
 export const finpay = new FinPayMockProvider();

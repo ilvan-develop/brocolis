@@ -2,8 +2,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { type ReactNode, useEffect, useState } from "react";
 import { AppState } from "react-native";
-import { createQueryClient, queryPersister } from "@/lib/query-client";
 import { syncQueuedOrders } from "@/lib/order-queue";
+import { createQueryClient, queryPersister } from "@/lib/query-client";
 
 export function QueryProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(createQueryClient);

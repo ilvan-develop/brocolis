@@ -3,10 +3,10 @@ import {
   enqueueOrder,
   getQueuedOrders,
   isNetworkError,
+  type QueuedOrderPayload,
+  type QueueStorage,
   removeQueuedOrder,
   syncQueuedOrders,
-  type QueueStorage,
-  type QueuedOrderPayload,
 } from "@/lib/order-queue";
 
 function createMemoryStorage(): QueueStorage {
@@ -34,9 +34,7 @@ const payload: QueuedOrderPayload = {
 
 describe("isNetworkError", () => {
   it("treats TypeError as a network error", () => {
-    expect(isNetworkError(new TypeError("Network request failed"))).toBe(
-      true,
-    );
+    expect(isNetworkError(new TypeError("Network request failed"))).toBe(true);
   });
 
   it("matches network-ish error messages", () => {

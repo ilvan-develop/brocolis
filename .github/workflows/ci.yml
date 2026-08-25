@@ -1,49 +1,78 @@
 name: CI
 
 on:
-  pull_request:
   push:
     branches: [main]
-
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  pull_request:
 
 jobs:
   quality:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: brocolis_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ["25432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d brocolis_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
-
       - uses: pnpm/action-setup@v4
+        with: { version: 11.21.0 }
       - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: pnpm
+        with: { node-version: 24, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm build
+      - run: pnpm test:unit
+      - run: pnpm check:drift
 
-      - name: Instalar dependências (frozen)
-        run: pnpm install --frozen-lockfile
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: brocolis_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ["25432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d brocolis_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:8-alpine
+        ports: ["26379:6379"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.21.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:migrate:deploy
+      - run: pnpm --filter @brocolis/qa test:e2e
 
-      - name: Verificar deriva de dependências
-        run: npx sherif
-
-      - name: Lint (Biome)
-        run: pnpm lint
-
-      - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Build
-        run: pnpm build
-
-      - name: Testes unitários
-        run: pnpm test:unit
-
-      - name: Cobertura mínima (>=80%)
-        run: pnpm test:unit -- --coverage.enabled --coverage.thresholds.lines=80
-
-      - name: Governança monorepo
-        run: node scripts/fitness-check.mjs
-
-      - name: Importação, multiplicação de dependências
-        run: npx depcruise packages/ apps/ --config .dependency-cruiser.cjs
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with: { languages: javascript, typescript }
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.21.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --audit-level high --prod
+      - run: pnpm dlx sherif

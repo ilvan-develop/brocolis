@@ -3,12 +3,79 @@ import {
   regulatoryPolicySchema,
 } from "@brocolis/contracts";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ComplianceService } from "../compliance/compliance.service.js";
 import {
   PrescriptionDigitalService,
   type PrescriptionScope,
 } from "./prescription-digital.service.js";
+
+vi.mock("@brocolis/db", () => {
+  const store: Record<string, unknown> = {};
+  const auditStore: Array<Record<string, unknown>> = [];
+  return {
+    database: () => ({
+      regulatoryPolicy: {
+        findMany: () =>
+          Promise.resolve(Object.values(store) as Record<string, unknown>[]),
+        findUnique: ({ where }: any) => {
+          const key = `policy:${(where?.marketCode ?? "").trim().toUpperCase()}`;
+          return Promise.resolve(
+            (store[key] as Record<string, unknown> | undefined) ?? null,
+          );
+        },
+        upsert: ({ where, create, update }: any) => {
+          const key = `policy:${(where.marketCode ?? "").trim().toUpperCase()}`;
+          const existing = store[key] as Record<string, unknown> | undefined;
+          const record = existing
+            ? { ...existing, ...update }
+            : {
+                ...create,
+                id: `c${Date.now().toString(36).padStart(12, "0")}`,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              };
+          store[key] = record;
+          return Promise.resolve(record);
+        },
+      },
+      complianceDecision: {
+        findMany: () => Promise.resolve([]),
+        create: ({ data }: any) => {
+          const record = {
+            ...data,
+            id: `c${Date.now().toString(36).padStart(12, "0")}`,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+          return Promise.resolve(record);
+        },
+      },
+      auditEvent: {
+        findMany: ({ where }: any) => {
+          let events = [...auditStore];
+          if (where?.action)
+            events = events.filter((e: any) => e.action === where.action);
+          if (where?.resourceType)
+            events = events.filter(
+              (e: any) => e.resourceType === where.resourceType,
+            );
+          return Promise.resolve(events);
+        },
+        create: ({ data }: any) => {
+          const record = {
+            ...data,
+            id: `c${Date.now().toString(36).padStart(12, "0")}`,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+          auditStore.push(record);
+          return Promise.resolve(record);
+        },
+      },
+    }),
+  };
+});
 
 const ORG = "00000000-0000-4000-8000-000000000000";
 const ORG_OTHER = "00000000-0000-4000-8000-000000000001";
@@ -87,7 +154,7 @@ async function issueRx(
 describe("PrescriptionDigitalService — profissionais", () => {
   it("regista profissional PENDING e verifica depois", async () => {
     const { rxdigital } = setup();
-    const professional = rxdigital.registerProfessional({
+    const professional = await rxdigital.registerProfessional({
       ...scope,
       name: PROFESSIONAL_NAME,
       credential,
@@ -95,7 +162,7 @@ describe("PrescriptionDigitalService — profissionais", () => {
     });
     expect(professional.verificationStatus).toBe("PENDING");
 
-    const verified = rxdigital.setVerification({
+    const verified = await rxdigital.setVerification({
       ...scope,
       professionalId: professional.id,
       status: "VERIFIED",
@@ -111,7 +178,7 @@ describe("PrescriptionDigitalService — profissionais", () => {
 
   it("verificação exige escopo de tenant", async () => {
     const { rxdigital } = setup();
-    const professional = rxdigital.registerProfessional({
+    const professional = await rxdigital.registerProfessional({
       ...scope,
       name: PROFESSIONAL_NAME,
       credential,
@@ -125,7 +192,7 @@ describe("PrescriptionDigitalService — profissionais", () => {
         status: "VERIFIED",
         decidedBy: "compliance-officer",
       }),
-    ).toThrowError(NotFoundException);
+    ).toThrow(NotFoundException);
   });
 });
 
@@ -152,13 +219,13 @@ describe("PrescriptionDigitalService — emitir", () => {
 
   it("bloqueia emissão por profissional não verificado", async () => {
     const { rxdigital } = setup();
-    const professional = rxdigital.registerProfessional({
+    const professional = await rxdigital.registerProfessional({
       ...scope,
       name: PROFESSIONAL_NAME,
       credential,
       specialty: "Medicina Geral",
     });
-    expect(() => issueRx(rxdigital, professional.id)).toThrowError(
+    await expect(issueRx(rxdigital, professional.id)).rejects.toThrow(
       BadRequestException,
     );
   });
@@ -172,9 +239,9 @@ describe("PrescriptionDigitalService — emitir", () => {
       }),
     );
     const professionalId = await registerVerifiedProfessional(rxdigital);
-    expect(() => issueRx(rxdigital, professionalId, [item], 90)).toThrowError(
-      /máximo regulatório/,
-    );
+    await expect(
+      issueRx(rxdigital, professionalId, [item], 90),
+    ).rejects.toThrow(/máximo regulatório/);
   });
 
   it("aceita daysValid dentro do máximo do mercado", async () => {
@@ -253,7 +320,7 @@ describe("PrescriptionDigitalService — validar na farmácia", () => {
     const { rxdigital } = setup();
     const professionalId = await registerVerifiedProfessional(rxdigital);
     const rx = await issueRx(rxdigital, professionalId);
-    rxdigital.revoke({
+    await rxdigital.revoke({
       ...scope,
       prescriptionId: rx.id,
       reason: "Erro de prescrição",
@@ -272,14 +339,14 @@ describe("PrescriptionDigitalService — validar na farmácia", () => {
     const { rxdigital } = setup();
     const professionalId = await registerVerifiedProfessional(rxdigital);
     const rx = await issueRx(rxdigital, professionalId);
-    expect(() =>
+    await expect(
       rxdigital.validate({
         organizationId: ORG_OTHER,
         marketCode: "AO",
         prescriptionId: rx.id,
         pharmacyId: PHARMACY,
       }),
-    ).toThrowError(NotFoundException);
+    ).rejects.toThrow(NotFoundException);
   });
 });
 
@@ -289,7 +356,7 @@ describe("PrescriptionDigitalService — dispensar, revogar, renovar", () => {
     const professionalId = await registerVerifiedProfessional(rxdigital);
     const rx = await issueRx(rxdigital, professionalId);
 
-    const dispensed = rxdigital.dispense(
+    const dispensed = await rxdigital.dispense(
       { ...scope, prescriptionId: rx.id, pharmacyId: PHARMACY },
       "c1234567890abcdef00000041",
     );
@@ -310,14 +377,14 @@ describe("PrescriptionDigitalService — dispensar, revogar, renovar", () => {
         { ...scope, prescriptionId: rx.id, pharmacyId: PHARMACY },
         "pharmacist",
       ),
-    ).toThrowError(/expirada/);
+    ).toThrow(/expirada/);
   });
 
   it("bloqueia dupla dispensa", async () => {
     const { rxdigital } = setup();
     const professionalId = await registerVerifiedProfessional(rxdigital);
     const rx = await issueRx(rxdigital, professionalId);
-    rxdigital.dispense(
+    await rxdigital.dispense(
       { ...scope, prescriptionId: rx.id, pharmacyId: PHARMACY },
       "pharmacist",
     );
@@ -326,14 +393,14 @@ describe("PrescriptionDigitalService — dispensar, revogar, renovar", () => {
         { ...scope, prescriptionId: rx.id, pharmacyId: PHARMACY },
         "pharmacist",
       ),
-    ).toThrowError(BadRequestException);
+    ).toThrow(BadRequestException);
   });
 
   it("revoga receita ativa com motivo auditado", async () => {
     const { rxdigital } = setup();
     const professionalId = await registerVerifiedProfessional(rxdigital);
     const rx = await issueRx(rxdigital, professionalId);
-    const revoked = rxdigital.revoke({
+    const revoked = await rxdigital.revoke({
       ...scope,
       prescriptionId: rx.id,
       reason: "Erro de posologia",
@@ -363,12 +430,12 @@ describe("PrescriptionDigitalService — dispensar, revogar, renovar", () => {
     const { rxdigital } = setup();
     const professionalId = await registerVerifiedProfessional(rxdigital);
     const rx = await issueRx(rxdigital, professionalId);
-    rxdigital.dispense(
+    await rxdigital.dispense(
       { ...scope, prescriptionId: rx.id, pharmacyId: PHARMACY },
       "pharmacist",
     );
-    expect(() =>
+    await expect(
       rxdigital.renew({ ...scope, prescriptionId: rx.id, daysValid: 14 }),
-    ).toThrowError(BadRequestException);
+    ).rejects.toThrow(BadRequestException);
   });
 });

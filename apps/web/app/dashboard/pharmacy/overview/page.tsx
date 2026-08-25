@@ -12,20 +12,23 @@ import {
 } from "@brocolis/ui/components/card";
 import { Skeleton } from "@brocolis/ui/components/skeleton";
 import Link from "next/link";
-import { useState } from "react";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
-import { useSimulatedLoad } from "@/hooks/use-simulated-load";
+import { useSession } from "@/hooks/use-session";
 import {
-  derivePharmacyKpis,
-  type PharmacyDashboardKpis,
-} from "@/lib/pharmacy-dashboard";
-import { DEMO_PHARMACY_SETTLEMENTS } from "@/lib/pharmacy-finance";
-import { DEMO_PHARMACY_INVENTORY } from "@/lib/pharmacy-inventory";
-import { DEMO_PHARMACY_ORDERS } from "@/lib/pharmacy-orders";
+  usePharmacyInventory,
+  usePharmacyOrders,
+  usePharmacySettlements,
+} from "@/lib/pharmacy-query";
 
 const KPI_KEYS: readonly {
   label: MessageKey;
-  value: (kpis: PharmacyDashboardKpis) => string;
+  value: (kpis: {
+    orderCount: number;
+    salesMinor: number;
+    salesCurrency: string;
+    stockPct: number;
+    pendingSettlements: number;
+  }) => string;
 }[] = [
   { label: "pharmacy.overview.kpi.orders", value: (k) => String(k.orderCount) },
   {
@@ -40,15 +43,53 @@ const KPI_KEYS: readonly {
 ];
 
 export default function PharmacyOverviewPage() {
-  const loading = useSimulatedLoad();
-  const [orders] = useState(() => [...DEMO_PHARMACY_ORDERS]);
-  const [inventory] = useState(() => [...DEMO_PHARMACY_INVENTORY]);
-  const [settlements] = useState(() => [...DEMO_PHARMACY_SETTLEMENTS]);
+  const { state } = useSession();
+  const scope = {
+    organizationId: state.organization?.id ?? "",
+    marketCode: state.marketCode ?? "AO",
+  };
 
-  const kpis = derivePharmacyKpis(orders, inventory, settlements);
+  const ordersQuery = usePharmacyOrders(scope);
+  const inventoryQuery = usePharmacyInventory(scope);
+  const settlementsQuery = usePharmacySettlements(scope);
+
+  const orders = ordersQuery.data ?? [];
+  const inventory = inventoryQuery.data ?? [];
+  const settlement = settlementsQuery.data ?? { netMinor: 0 };
+
+  const orderCount = orders.length;
+  const salesMinor = orders.reduce(
+    (sum, order) => sum + (order.totals?.total?.amount ?? 0),
+    0,
+  );
+  const salesCurrency = orders[0]?.totals?.total?.currency ?? "AOA";
+  const stockPct =
+    inventory.length > 0
+      ? Math.round(
+          (inventory.filter((item) => item.quantityOnHand >= item.reorderPoint)
+            .length /
+            inventory.length) *
+            100,
+        )
+      : 0;
+  const pendingSettlements = settlement.status === "PENDING" ? 1 : 0;
+
+  const kpis = {
+    orderCount,
+    salesMinor,
+    salesCurrency,
+    stockPct,
+    pendingSettlements,
+  };
+
   const recentOrders = [...orders]
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
     .slice(0, 5);
+
+  const isLoading =
+    ordersQuery.isLoading ||
+    inventoryQuery.isLoading ||
+    settlementsQuery.isLoading;
 
   return (
     <div className="flex flex-col gap-6">
@@ -62,7 +103,7 @@ export default function PharmacyOverviewPage() {
       </header>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {loading
+        {isLoading
           ? KPI_KEYS.map((kpi) => (
               <Card key={kpi.label}>
                 <CardHeader className="flex flex-col gap-2">
@@ -96,7 +137,7 @@ export default function PharmacyOverviewPage() {
           </Button>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {isLoading ? (
             <div className="flex flex-col gap-2" aria-busy="true">
               <Skeleton className="h-8 w-full" />
               <Skeleton className="h-8 w-full" />
@@ -130,9 +171,9 @@ export default function PharmacyOverviewPage() {
               <tbody>
                 {recentOrders.map((order) => (
                   <tr key={order.id} className="border-b last:border-0">
-                    <td className="py-2 pr-4 font-medium">{order.number}</td>
+                    <td className="py-2 pr-4 font-medium">{order.id}</td>
                     <td className="py-2 pr-4 text-muted-foreground">
-                      {order.customerName}
+                      {order.customerId ?? "-"}
                     </td>
                     <td className="py-2 pr-4 text-muted-foreground">
                       {formatCurrency(

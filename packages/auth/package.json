@@ -23,10 +23,12 @@
   },
   "dependencies": {
     "better-auth": "catalog:",
+    "jsonwebtoken": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
+    "@types/jsonwebtoken": "catalog:",
     "tsup": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

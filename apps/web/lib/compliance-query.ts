@@ -1,7 +1,11 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { ComplianceDecision, CompliancePolicy, SaFTExport } from "./compliance-fixtures";
+import type {
+  ComplianceDecision,
+  CompliancePolicy,
+  SaFTExport,
+} from "./compliance-fixtures";
 import {
   DEMO_COMPLIANCE_DECISIONS,
   DEMO_COMPLIANCE_POLICY,

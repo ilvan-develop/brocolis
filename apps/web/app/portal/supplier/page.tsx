@@ -1,6 +1,7 @@
 "use client";
 
-import { tF4, type F4MessageKey } from "@brocolis/i18n";
+import type { Supplier } from "@brocolis/contracts";
+import { type F4MessageKey, tF4 } from "@brocolis/i18n";
 import { Badge } from "@brocolis/ui/components/badge";
 import {
   Card,
@@ -10,11 +11,10 @@ import {
   CardTitle,
 } from "@brocolis/ui/components/card";
 import { Skeleton } from "@brocolis/ui/components/skeleton";
-import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import type { Supplier } from "@brocolis/contracts";
-import { listSuppliers } from "@/lib/procurement";
+import Link from "next/link";
 import { useSession } from "@/hooks/use-session";
+import { listSuppliers } from "@/lib/procurement";
 
 const STATUS_VARIANT: Record<
   "ACTIVE" | "INACTIVE" | "SUSPENDED",
@@ -25,9 +25,11 @@ const STATUS_VARIANT: Record<
   SUSPENDED: "destructive",
 };
 
-const SUPPLIER_STATUS_KEY: Record<
+const _SUPPLIER_STATUS_KEY: Record<
   Supplier["status"],
-  "procurement.supplier.active" | "procurement.supplier.inactive" | "procurement.supplier.suspended"
+  | "procurement.supplier.active"
+  | "procurement.supplier.inactive"
+  | "procurement.supplier.suspended"
 > = {
   ACTIVE: "procurement.supplier.active",
   INACTIVE: "procurement.supplier.inactive",
@@ -61,9 +63,7 @@ export default function SupplierListPage() {
       <Card>
         <CardHeader>
           <CardTitle>{tF4("procurement.supplier.title")}</CardTitle>
-          <CardDescription>
-            {tF4("procurement.supplier.empty")}
-          </CardDescription>
+          <CardDescription>{tF4("procurement.supplier.empty")}</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -111,7 +111,9 @@ export default function SupplierListPage() {
                     </td>
                     <td className="py-2">
                       <Badge variant={STATUS_VARIANT[supplier.status]}>
-                        {tF4(`procurement.supplier.${supplier.status.toLowerCase()}` as F4MessageKey)}
+                        {tF4(
+                          `procurement.supplier.${supplier.status.toLowerCase()}` as F4MessageKey,
+                        )}
                       </Badge>
                     </td>
                   </tr>

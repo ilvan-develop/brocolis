@@ -1,6 +1,5 @@
 "use client";
 
-import { formatDate } from "@brocolis/formatters";
 import { t } from "@brocolis/i18n";
 import { cn } from "@brocolis/ui";
 import { Button } from "@brocolis/ui/components/button";
@@ -12,46 +11,27 @@ import {
   CardTitle,
 } from "@brocolis/ui/components/card";
 import { Skeleton } from "@brocolis/ui/components/skeleton";
-import { useState } from "react";
-import { InventoryAlertBadge } from "@/components/pharmacy/inventory-alert-badge";
-import { useSimulatedLoad } from "@/hooks/use-simulated-load";
-import {
-  availableOf,
-  DEFAULT_INVENTORY_THRESHOLDS,
-  DEMO_PHARMACY_INVENTORY,
-  inventoryAlertFor,
-  inventoryTotals,
-  type PharmacyInventoryRow,
-} from "@/lib/pharmacy-inventory";
-
-const TOTALS: readonly {
-  label:
-    | "pharmacy.inventory.total"
-    | "pharmacy.inventory.lowStock"
-    | "pharmacy.inventory.outOfStock"
-    | "pharmacy.inventory.expiring"
-    | "pharmacy.inventory.expired";
-  value: (totals: ReturnType<typeof inventoryTotals>) => number;
-}[] = [
-  { label: "pharmacy.inventory.total", value: (totals) => totals.items },
-  { label: "pharmacy.inventory.lowStock", value: (totals) => totals.lowStock },
-  {
-    label: "pharmacy.inventory.outOfStock",
-    value: (totals) => totals.outOfStock,
-  },
-  { label: "pharmacy.inventory.expiring", value: (totals) => totals.expiring },
-  { label: "pharmacy.inventory.expired", value: (totals) => totals.expired },
-];
+import { useSession } from "@/hooks/use-session";
+import { usePharmacyInventory } from "@/lib/pharmacy-query";
 
 export default function PharmacyInventoryPage() {
-  const loading = useSimulatedLoad();
-  const [rows] = useState<PharmacyInventoryRow[]>(() => [
-    ...DEMO_PHARMACY_INVENTORY,
-  ]);
-  const [error, setError] = useState<string | null>(null);
+  const { state } = useSession();
+  const scope = {
+    organizationId: state.organization?.id ?? "",
+    marketCode: state.marketCode ?? "AO",
+  };
 
-  const now = new Date();
-  const totals = inventoryTotals(rows, now, DEFAULT_INVENTORY_THRESHOLDS);
+  const inventoryQuery = usePharmacyInventory(scope);
+  const items = inventoryQuery.data ?? [];
+  const isLoading = inventoryQuery.isLoading;
+  const isError = inventoryQuery.isError;
+
+  const lowStock = items.filter(
+    (item) =>
+      item.quantityOnHand > 0 && item.quantityOnHand <= item.reorderPoint,
+  ).length;
+  const outOfStock = items.filter((item) => item.quantityOnHand === 0).length;
+  const _totalUnits = items.reduce((sum, item) => sum + item.quantityOnHand, 0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -65,21 +45,38 @@ export default function PharmacyInventoryPage() {
       </header>
 
       <div className="flex flex-wrap gap-4">
-        {loading
-          ? TOTALS.map((total) => (
-              <Card key={total.label} className="min-w-40">
+        {isLoading
+          ? [
+              "pharmacy.inventory.total",
+              "pharmacy.inventory.lowStock",
+              "pharmacy.inventory.outOfStock",
+            ].map((label) => (
+              <Card key={label} className="min-w-40">
                 <CardHeader className="flex flex-col gap-2">
                   <Skeleton className="h-4 w-24" />
                   <Skeleton className="h-8 w-16" />
                 </CardHeader>
               </Card>
             ))
-          : TOTALS.map((total) => (
+          : [
+              {
+                label: "pharmacy.inventory.total" as const,
+                value: items.length,
+              },
+              {
+                label: "pharmacy.inventory.lowStock" as const,
+                value: lowStock,
+              },
+              {
+                label: "pharmacy.inventory.outOfStock" as const,
+                value: outOfStock,
+              },
+            ].map((total) => (
               <Card key={total.label} className="min-w-40">
                 <CardHeader className="flex flex-col gap-2">
                   <CardDescription>{t(total.label)}</CardDescription>
                   <CardTitle className="text-3xl font-semibold">
-                    {total.value(totals)}
+                    {total.value}
                   </CardTitle>
                 </CardHeader>
               </Card>
@@ -92,26 +89,26 @@ export default function PharmacyInventoryPage() {
           <CardDescription>{t("pharmacy.inventory.subtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {isLoading ? (
             <div className="flex flex-col gap-2" aria-busy="true">
               <Skeleton className="h-8 w-full" />
               <Skeleton className="h-8 w-full" />
               <Skeleton className="h-8 w-full" />
             </div>
-          ) : error !== null ? (
+          ) : isError ? (
             <div className="flex flex-col items-start gap-2">
               <p role="alert" className="text-destructive text-sm">
-                {error}
+                Something went wrong
               </p>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setError(null)}
+                onClick={() => inventoryQuery.refetch()}
               >
-                {t("catalog.retry")}
+                Retry
               </Button>
             </div>
-          ) : rows.length === 0 ? (
+          ) : items.length === 0 ? (
             <p className="text-muted-foreground text-sm">
               {t("pharmacy.inventory.empty")}
             </p>
@@ -123,71 +120,54 @@ export default function PharmacyInventoryPage() {
                     {t("pharmacy.catalog.product")}
                   </th>
                   <th className="py-2 pr-4 font-medium">
-                    {t("pharmacy.inventory.batch")}
-                  </th>
-                  <th className="py-2 pr-4 font-medium">
-                    {t("pharmacy.inventory.expiry")}
-                  </th>
-                  <th className="py-2 pr-4 font-medium">
                     {t("pharmacy.inventory.quantity")}
                   </th>
-                  <th className="py-2 pr-4 font-medium">
-                    {t("pharmacy.inventory.reserved")}
-                  </th>
-                  <th className="py-2 pr-4 font-medium">
-                    {t("pharmacy.inventory.available")}
-                  </th>
+                  <th className="py-2 pr-4 font-medium">Reorder point</th>
                   <th className="py-2 font-medium">
                     {t("pharmacy.inventory.alert")}
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => {
-                  const alert = inventoryAlertFor(
-                    row,
-                    now,
-                    DEFAULT_INVENTORY_THRESHOLDS,
-                  );
-                  const expired = alert === "EXPIRED";
+                {items.map((item) => {
+                  const alert =
+                    item.quantityOnHand === 0
+                      ? "OUT_OF_STOCK"
+                      : item.quantityOnHand <= item.reorderPoint
+                        ? "LOW_STOCK"
+                        : null;
                   return (
-                    <tr key={row.itemId} className="border-b last:border-0">
+                    <tr key={item.id} className="border-b last:border-0">
                       <td
                         className={cn(
                           "py-2 pr-4 font-medium",
-                          expired && "text-destructive",
+                          alert === "OUT_OF_STOCK" && "text-destructive",
                         )}
                       >
-                        {row.productName}
+                        {item.productId}
                       </td>
-                      <td
-                        className={cn(
-                          "py-2 pr-4 text-muted-foreground",
-                          expired && "text-destructive",
-                        )}
-                      >
-                        {row.batchNumber}
-                      </td>
-                      <td
-                        className={cn(
-                          "py-2 pr-4",
-                          expired && "text-destructive",
-                        )}
-                      >
-                        {formatDate(row.expiryDate)}
-                      </td>
-                      <td className="py-2 pr-4">{row.quantityOnHand}</td>
+                      <td className="py-2 pr-4">{item.quantityOnHand}</td>
                       <td className="py-2 pr-4 text-muted-foreground">
-                        {row.reserved}
+                        {item.reorderPoint}
                       </td>
-                      <td className="py-2 pr-4">{availableOf(row)}</td>
                       <td className="py-2">
                         {alert === null ? (
                           <span className="text-muted-foreground text-xs">
                             —
                           </span>
                         ) : (
-                          <InventoryAlertBadge type={alert} />
+                          <span
+                            className={cn(
+                              "text-xs font-medium",
+                              alert === "OUT_OF_STOCK"
+                                ? "text-destructive"
+                                : "text-amber-600",
+                            )}
+                          >
+                            {alert === "OUT_OF_STOCK"
+                              ? t("pharmacy.inventory.outOfStock")
+                              : t("pharmacy.inventory.lowStock")}
+                          </span>
                         )}
                       </td>
                     </tr>

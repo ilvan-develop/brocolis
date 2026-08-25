@@ -1,5 +1,5 @@
-import { getLocale, setLocale, t } from "@/lib/i18n";
 import { defaultLocale } from "@brocolis/i18n";
+import { getLocale, setLocale, t } from "@/lib/i18n";
 
 afterEach(() => {
   setLocale(defaultLocale);

@@ -11,36 +11,40 @@ import {
 } from "@brocolis/ui/components/card";
 import { Input } from "@brocolis/ui/components/input";
 import { Label } from "@brocolis/ui/components/label";
-import { Separator } from "@brocolis/ui/components/separator";
 import { Skeleton } from "@brocolis/ui/components/skeleton";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useSimulatedLoad } from "@/hooks/use-simulated-load";
+import { useSession } from "@/hooks/use-session";
 import { validateEmailOnly } from "@/lib/validation";
 
 type SettingsForm = {
   name: string;
   email: string;
   phone: string;
-  hours: string;
-  deliveryRadius: string;
-  baseFee: string;
-};
-
-const INITIAL_SETTINGS: SettingsForm = {
-  name: "Farmácia Mucuio",
-  email: "geral@farmanciamucuio.co.ao",
-  phone: "923 456 789",
-  hours: "",
-  deliveryRadius: "10",
-  baseFee: "1500",
 };
 
 export default function PharmacySettingsPage() {
-  const loading = useSimulatedLoad();
-  const [form, setForm] = useState<SettingsForm>(INITIAL_SETTINGS);
+  const { state } = useSession();
+  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState<SettingsForm>({
+    name: "",
+    email: "",
+    phone: "",
+  });
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useState(() => {
+    if (state.organization) {
+      setForm({
+        name: state.organization.name,
+        email: state.user?.email ?? "",
+        phone: "",
+      });
+    }
+    const timer = setTimeout(() => setLoading(false), 400);
+    return () => clearTimeout(timer);
+  });
 
   function update(field: keyof SettingsForm, value: string) {
     setForm((previous) => ({ ...previous, [field]: value }));
@@ -58,7 +62,7 @@ export default function PharmacySettingsPage() {
     }
     setError(null);
     setEditing(false);
-    toast.success(t("pharmacy.settings.saved"));
+    toast.success("Settings saved successfully");
   }
 
   return (
@@ -84,149 +88,58 @@ export default function PharmacySettingsPage() {
               size="sm"
               onClick={() => setEditing(true)}
             >
-              {t("pharmacy.settings.edit")}
+              Edit
             </Button>
           )}
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-4">
           {loading ? (
-            <div className="flex flex-col gap-2" aria-busy="true">
+            <div className="flex flex-col gap-4">
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
             </div>
           ) : (
-            <div className="flex flex-col gap-4">
-              {(
-                [
-                  {
-                    key: "name",
-                    label: "pharmacy.settings.name",
-                    type: "text",
-                  },
-                  {
-                    key: "email",
-                    label: "pharmacy.settings.email",
-                    type: "email",
-                  },
-                  {
-                    key: "phone",
-                    label: "pharmacy.settings.phone",
-                    type: "tel",
-                  },
-                ] as const
-              ).map((field) => (
-                <div key={field.key} className="flex flex-col gap-2">
-                  <Label htmlFor={`settings-${field.key}`}>
-                    {t(field.label)}
-                  </Label>
-                  {editing ? (
-                    <Input
-                      id={`settings-${field.key}`}
-                      type={field.type}
-                      value={form[field.key]}
-                      onChange={(event) =>
-                        update(field.key, event.target.value)
-                      }
-                    />
-                  ) : (
-                    <p className="border-input bg-background flex h-9 w-full items-center rounded-md border px-3 text-sm">
-                      {form[field.key]}
-                    </p>
-                  )}
-                </div>
-              ))}
-
-              <Separator />
-
+            <>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="settings-hours">
-                  {t("pharmacy.settings.hours")}
-                </Label>
-                {editing ? (
-                  <Input
-                    id="settings-hours"
-                    type="text"
-                    value={form.hours}
-                    placeholder={t("pharmacy.settings.hours.placeholder")}
-                    onChange={(event) => update("hours", event.target.value)}
-                  />
-                ) : (
-                  <p className="border-input bg-background flex h-9 w-full items-center rounded-md border px-3 text-sm">
-                    {form.hours.length > 0
-                      ? form.hours
-                      : t("pharmacy.settings.hours.placeholder")}
-                  </p>
-                )}
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  value={form.name}
+                  onChange={(e) => update("name", e.target.value)}
+                  disabled={!editing}
+                />
               </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="settings-radius">
-                    {t("pharmacy.settings.deliveryRadius")}
-                  </Label>
-                  {editing ? (
-                    <Input
-                      id="settings-radius"
-                      type="number"
-                      min="0"
-                      value={form.deliveryRadius}
-                      onChange={(event) =>
-                        update("deliveryRadius", event.target.value)
-                      }
-                    />
-                  ) : (
-                    <p className="border-input bg-background flex h-9 w-full items-center rounded-md border px-3 text-sm">
-                      {form.deliveryRadius} km
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="settings-base-fee">
-                    {t("pharmacy.settings.baseFee")}
-                  </Label>
-                  {editing ? (
-                    <Input
-                      id="settings-base-fee"
-                      type="number"
-                      min="0"
-                      value={form.baseFee}
-                      onChange={(event) =>
-                        update("baseFee", event.target.value)
-                      }
-                    />
-                  ) : (
-                    <p className="border-input bg-background flex h-9 w-full items-center rounded-md border px-3 text-sm">
-                      {form.baseFee} Kz
-                    </p>
-                  )}
-                </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => update("email", e.target.value)}
+                  disabled={!editing}
+                />
               </div>
-
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  value={form.phone}
+                  onChange={(e) => update("phone", e.target.value)}
+                  disabled={!editing}
+                />
+              </div>
               {error !== null && (
                 <p role="alert" className="text-destructive text-sm">
                   {error}
                 </p>
               )}
-
               {editing && (
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setForm(INITIAL_SETTINGS);
-                      setError(null);
-                      setEditing(false);
-                    }}
-                  >
-                    {t("pharmacy.settings.cancel")}
-                  </Button>
-                  <Button onClick={handleSave}>
-                    {t("pharmacy.settings.save")}
-                  </Button>
-                </div>
+                <Button onClick={handleSave} className="w-full">
+                  Save
+                </Button>
               )}
-            </div>
+            </>
           )}
         </CardContent>
       </Card>

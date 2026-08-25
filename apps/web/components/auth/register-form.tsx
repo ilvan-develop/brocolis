@@ -3,155 +3,153 @@
 import { t } from "@brocolis/i18n";
 import { Button } from "@brocolis/ui/components/button";
 import { Input } from "@brocolis/ui/components/input";
-import { Label } from "@brocolis/ui/components/label";
+import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useState } from "react";
-import { type ApiClient, api as defaultApi } from "@/lib/api";
+import { useForm } from "react-hook-form";
 import {
-  type SignUpValues,
-  type ValidationErrorKey,
-  type ValidationField,
-  validateSignUp,
-} from "@/lib/validation";
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/form";
+import { type ApiClient, api as defaultApi } from "@/lib/api";
+import { type SignUpInput, signUpSchema } from "@/lib/schemas";
 
 type RegisterFormProps = {
-  onSubmit?: (values: SignUpValues) => Promise<void>;
+  onSubmit?: (values: SignUpInput) => Promise<void>;
   api?: ApiClient;
+  marketCode?: string;
 };
 
 export function RegisterForm({
   onSubmit,
   api = defaultApi,
+  marketCode = "AO",
 }: RegisterFormProps) {
   const router = useRouter();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [errors, setErrors] = useState<
-    Partial<Record<ValidationField, ValidationErrorKey>>
-  >({});
-  const [submitting, setSubmitting] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
+  const form = useForm<SignUpInput>({
+    resolver: zodResolver(signUpSchema),
+    defaultValues: { name: "", email: "", password: "", confirmPassword: "" },
+  });
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    const values: SignUpValues = { name, email, password, confirmPassword };
-    const result = validateSignUp(values);
-    if (!result.valid) {
-      setErrors(result.errors);
-      return;
-    }
-
-    setErrors({});
-    setServerError(null);
-    setSubmitting(true);
-
+  async function handleSubmit(values: SignUpInput) {
     try {
       if (onSubmit) {
         await onSubmit(values);
       } else {
         await api.auth.signUp({
-          name,
-          email,
-          password,
-          marketCode: "AO",
+          name: values.name,
+          email: values.email,
+          password: values.password,
+          marketCode,
         });
         router.push("/verify-email");
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "";
-      setServerError(message || t("error.generic"));
-    } finally {
-      setSubmitting(false);
+      form.setError("root", {
+        type: "server",
+        message: message || t("error.generic"),
+      });
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="signup-name">{t("auth.signup.name")}</Label>
-        <Input
-          id="signup-name"
-          autoComplete="name"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          aria-invalid={errors.name !== undefined}
-          aria-describedby={errors.name ? "signup-name-error" : undefined}
-        />
-        {errors.name !== undefined && (
-          <p id="signup-name-error" className="text-destructive text-sm">
-            {t(errors.name)}
-          </p>
+    <form
+      onSubmit={form.handleSubmit(handleSubmit)}
+      className="flex flex-col gap-4"
+      noValidate
+    >
+      <FormField
+        control={form.control}
+        name="name"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel htmlFor="signup-name">{t("auth.signup.name")}</FormLabel>
+            <FormControl>
+              <Input id="signup-name" autoComplete="name" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
         )}
-      </div>
+      />
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="signup-email">{t("auth.signup.email")}</Label>
-        <Input
-          id="signup-email"
-          type="email"
-          autoComplete="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          aria-invalid={errors.email !== undefined}
-          aria-describedby={errors.email ? "signup-email-error" : undefined}
-        />
-        {errors.email !== undefined && (
-          <p id="signup-email-error" className="text-destructive text-sm">
-            {t(errors.email)}
-          </p>
+      <FormField
+        control={form.control}
+        name="email"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel htmlFor="signup-email">
+              {t("auth.signup.email")}
+            </FormLabel>
+            <FormControl>
+              <Input
+                id="signup-email"
+                type="email"
+                autoComplete="email"
+                {...field}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
         )}
-      </div>
+      />
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="signup-password">{t("auth.signup.password")}</Label>
-        <Input
-          id="signup-password"
-          type="password"
-          autoComplete="new-password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          aria-invalid={errors.password !== undefined}
-          aria-describedby={
-            errors.password ? "signup-password-error" : undefined
-          }
-        />
-        {errors.password !== undefined && (
-          <p id="signup-password-error" className="text-destructive text-sm">
-            {t(errors.password)}
-          </p>
+      <FormField
+        control={form.control}
+        name="password"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel htmlFor="signup-password">
+              {t("auth.signup.password")}
+            </FormLabel>
+            <FormControl>
+              <Input
+                id="signup-password"
+                type="password"
+                autoComplete="new-password"
+                {...field}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
         )}
-      </div>
+      />
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="signup-confirm">{t("auth.signup.confirm")}</Label>
-        <Input
-          id="signup-confirm"
-          type="password"
-          autoComplete="new-password"
-          value={confirmPassword}
-          onChange={(event) => setConfirmPassword(event.target.value)}
-          aria-invalid={errors.confirm !== undefined}
-          aria-describedby={errors.confirm ? "signup-confirm-error" : undefined}
-        />
-        {errors.confirm !== undefined && (
-          <p id="signup-confirm-error" className="text-destructive text-sm">
-            {t(errors.confirm)}
-          </p>
+      <FormField
+        control={form.control}
+        name="confirmPassword"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{t("auth.signup.confirm")}</FormLabel>
+            <FormControl>
+              <Input
+                id="signup-confirm"
+                type="password"
+                autoComplete="new-password"
+                {...field}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
         )}
-      </div>
+      />
 
-      {serverError !== null && (
+      {form.formState.errors.root?.message && (
         <p role="alert" className="text-destructive text-sm">
-          {serverError}
+          {form.formState.errors.root.message}
         </p>
       )}
 
-      <Button type="submit" disabled={submitting} className="w-full">
-        {t("auth.signup.submit")}
+      <Button
+        type="submit"
+        disabled={form.formState.isSubmitting}
+        className="w-full"
+      >
+        {form.formState.isSubmitting ? "..." : t("auth.signup.submit")}
       </Button>
 
       <p className="text-muted-foreground text-center text-sm">

@@ -139,8 +139,8 @@ export function createSeedCatalog(): CatalogOffer[] {
 export class CatalogService {
   private readonly offers: CatalogOffer[];
 
-  constructor(offers: CatalogOffer[] = createSeedCatalog()) {
-    this.offers = offers;
+  constructor() {
+    this.offers = createSeedCatalog();
   }
 
   search(input: unknown): CatalogSearchResult {

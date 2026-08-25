@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
 import { NotFoundException } from "@nestjs/common";
+import { describe, expect, it, vi } from "vitest";
 import { SaftExportService } from "./saft-export.service.js";
 
 vi.mock("@brocolis/db", () => {
@@ -8,7 +8,12 @@ vi.mock("@brocolis/db", () => {
     database: () => ({
       saftExportJob: {
         create: ({ data }: any) => {
-          const record = { ...data, id: `c${Date.now().toString(36).padStart(12, "0")}`, createdAt: new Date(), updatedAt: new Date() };
+          const record = {
+            ...data,
+            id: `c${Date.now().toString(36).padStart(12, "0")}`,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
           store[`job:${record.id}`] = record;
           return Promise.resolve(record);
         },
@@ -72,9 +77,16 @@ describe("SaftExportService", () => {
     const db = {
       saftExportJob: {
         findFirst: vi.fn().mockResolvedValue(makeJob()),
-        update: vi.fn().mockImplementation(async (args: { where: { id: string }; data: Record<string, unknown> }) => {
-          return { ...makeJob(), ...args.data, updatedAt: new Date() };
-        }),
+        update: vi
+          .fn()
+          .mockImplementation(
+            async (args: {
+              where: { id: string };
+              data: Record<string, unknown>;
+            }) => {
+              return { ...makeJob(), ...args.data, updatedAt: new Date() };
+            },
+          ),
       },
       order: {
         findMany: vi.fn().mockResolvedValue([makeOrder()]),
@@ -83,7 +95,9 @@ describe("SaftExportService", () => {
         findMany: vi.fn().mockResolvedValue([makePayment()]),
       } as never,
     };
-    vi.mocked(await import("@brocolis/db")).database = vi.fn().mockReturnValue(db);
+    vi.mocked(await import("@brocolis/db")).database = vi
+      .fn()
+      .mockReturnValue(db);
 
     const svc = new SaftExportService();
     const result = await svc.generate("c000000000000000000000401");
@@ -93,7 +107,10 @@ describe("SaftExportService", () => {
 
     expect(db.saftExportJob.update).toHaveBeenCalledWith({
       where: { id: "c000000000000000000000401" },
-      data: { status: "COMPLETED", fileUrl: "saft://exports/c000000000000000000000401.xml" },
+      data: {
+        status: "COMPLETED",
+        fileUrl: "saft://exports/c000000000000000000000401.xml",
+      },
     });
   });
 
@@ -106,12 +123,12 @@ describe("SaftExportService", () => {
       order: { findMany: vi.fn() } as never,
       payment: { findMany: vi.fn() } as never,
     };
-    vi.mocked(await import("@brocolis/db")).database = vi.fn().mockReturnValue(db);
+    vi.mocked(await import("@brocolis/db")).database = vi
+      .fn()
+      .mockReturnValue(db);
 
     const svc = new SaftExportService();
-    await expect(svc.generate("missing")).rejects.toThrow(
-      NotFoundException,
-    );
+    await expect(svc.generate("missing")).rejects.toThrow(NotFoundException);
   });
 
   it("marks job as RUNNING before generating", async () => {
@@ -119,15 +136,21 @@ describe("SaftExportService", () => {
     const db = {
       saftExportJob: {
         findFirst: vi.fn().mockResolvedValue(makeJob()),
-        update: vi.fn().mockImplementation(async (args: { data: Record<string, unknown> }) => {
-          updates.push(args.data);
-          return { ...makeJob(), ...args.data, updatedAt: new Date() };
-        }),
+        update: vi
+          .fn()
+          .mockImplementation(
+            async (args: { data: Record<string, unknown> }) => {
+              updates.push(args.data);
+              return { ...makeJob(), ...args.data, updatedAt: new Date() };
+            },
+          ),
       },
       order: { findMany: vi.fn().mockResolvedValue([]) } as never,
       payment: { findMany: vi.fn().mockResolvedValue([]) } as never,
     };
-    vi.mocked(await import("@brocolis/db")).database = vi.fn().mockReturnValue(db);
+    vi.mocked(await import("@brocolis/db")).database = vi
+      .fn()
+      .mockReturnValue(db);
 
     const svc = new SaftExportService();
     await svc.generate("c000000000000000000000401");
@@ -147,7 +170,9 @@ describe("SaftExportService", () => {
       order: { findMany: vi.fn() } as never,
       payment: { findMany: vi.fn() } as never,
     };
-    vi.mocked(await import("@brocolis/db")).database = vi.fn().mockReturnValue(db);
+    vi.mocked(await import("@brocolis/db")).database = vi
+      .fn()
+      .mockReturnValue(db);
 
     const svc = new SaftExportService();
     expect(await svc.getJob("missing")).toBeNull();

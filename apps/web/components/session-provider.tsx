@@ -106,7 +106,7 @@ export function SessionProvider({
         name: "",
         slug: "",
         status: "PENDING",
-        marketCode: "AO",
+        marketCode: result.user.marketCode,
         createdAt: new Date(),
         updatedAt: new Date(),
       },

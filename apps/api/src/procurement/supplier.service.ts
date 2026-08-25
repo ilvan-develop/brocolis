@@ -1,5 +1,5 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
 import { database } from "@brocolis/db";
+import { Injectable, NotFoundException } from "@nestjs/common";
 
 export type SupplierRecord = {
   id: string;

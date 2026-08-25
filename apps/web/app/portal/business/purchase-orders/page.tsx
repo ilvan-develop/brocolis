@@ -1,7 +1,7 @@
 "use client";
 
 import { formatCurrency } from "@brocolis/formatters";
-import { tF4, type F4MessageKey } from "@brocolis/i18n";
+import { type F4MessageKey, tF4 } from "@brocolis/i18n";
 import { Badge } from "@brocolis/ui/components/badge";
 import {
   Card,
@@ -12,8 +12,8 @@ import {
 } from "@brocolis/ui/components/card";
 import { Skeleton } from "@brocolis/ui/components/skeleton";
 import { useQuery } from "@tanstack/react-query";
-import { listPurchaseOrders } from "@/lib/procurement";
 import { useSession } from "@/hooks/use-session";
+import { listPurchaseOrders } from "@/lib/procurement";
 
 const PO_STATUS_VARIANT: Record<
   | "DRAFT"

@@ -1,5 +1,5 @@
 import { Controller, Get, Query } from "@nestjs/common";
-import type { CatalogService } from "./catalog.service.js";
+import { CatalogService } from "./catalog.service.js";
 
 type RawQuery = Record<string, string | undefined>;
 
@@ -15,7 +15,11 @@ function coerceSearchQuery(query: RawQuery): Record<string, unknown> {
 
 @Controller("catalog")
 export class CatalogController {
-  constructor(private readonly catalog: CatalogService) {}
+  private readonly catalog: CatalogService;
+
+  constructor() {
+    this.catalog = new CatalogService();
+  }
 
   @Get("search")
   search(@Query() query: RawQuery) {

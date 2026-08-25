@@ -89,7 +89,7 @@ export class B2b2cService {
   async createOrder(input: unknown): Promise<B2b2cOrder> {
     const parsed = createB2b2cOrderInputSchema.parse(input);
     const db = await database();
-    const now = new Date();
+    const _now = new Date();
     const order = await db.b2b2cOrder.create({
       data: {
         organizationId: parsed.organizationId,
@@ -191,7 +191,7 @@ export class B2b2cService {
         marketCode: parsed.marketCode,
       },
     });
-    if (!existing || existing.currentStage !== "CONSUMER_ORDER") {
+    if (existing?.currentStage !== "CONSUMER_ORDER") {
       throw new BadRequestException(
         `Cannot confirm pharmacy at stage ${existing?.currentStage}`,
       );
@@ -237,7 +237,7 @@ export class B2b2cService {
         marketCode: parsed.marketCode,
       },
     });
-    if (!existing || existing.currentStage !== "PHARMACY_CONFIRMATION") {
+    if (existing?.currentStage !== "PHARMACY_CONFIRMATION") {
       throw new BadRequestException(
         `Cannot pull from supplier at stage ${existing?.currentStage}`,
       );
@@ -292,7 +292,9 @@ export class B2b2cService {
         existing.currentStatus === "COMPLETED")
     ) {
       throw new BadRequestException(
-        existing ? "Order already delivered" : `Order ${parsed.orderId} not found`,
+        existing
+          ? "Order already delivered"
+          : `Order ${parsed.orderId} not found`,
       );
     }
     if (

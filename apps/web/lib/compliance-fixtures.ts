@@ -7,7 +7,12 @@ export type CompliancePolicy = {
 
 export type ComplianceDecision = {
   id: string;
-  subject: "HEALTHCARE_PROFESSIONAL" | "PHARMACY" | "SUPPLIER" | "PRODUCT" | "E_PRESCRIPTION";
+  subject:
+    | "HEALTHCARE_PROFESSIONAL"
+    | "PHARMACY"
+    | "SUPPLIER"
+    | "PRODUCT"
+    | "E_PRESCRIPTION";
   decision: "APPROVED" | "REJECTED" | "ESCALATED";
   reason: string;
   decidedAt: Date;

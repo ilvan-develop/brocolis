@@ -22,10 +22,27 @@ import {
 } from "@brocolis/ui/components/dialog";
 import { Input } from "@brocolis/ui/components/input";
 import { Label } from "@brocolis/ui/components/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@brocolis/ui/components/select";
 import { Skeleton } from "@brocolis/ui/components/skeleton";
-import { type FormEvent, useEffect, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import {
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/form";
+import { useSession } from "@/hooks/use-session";
 import { api } from "@/lib/api";
-import { validateEmailOnly } from "@/lib/validation";
+import { type InviteInput, inviteSchema } from "@/lib/schemas";
 
 const ROLE_LABEL = {
   OWNER: "roles.owner",
@@ -45,15 +62,18 @@ const STATUS_LABEL = {
 } as const satisfies Record<string, MessageKey>;
 
 export default function OrganizationsPage() {
-  const [organizationId] = useState("00000000-0000-4000-8000-000000000001");
+  const { state } = useSession();
+  const organizationId = state.organization?.id ?? "";
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<MemberRole>("PHARMACIST");
-  const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
+
+  const form = useForm<InviteInput>({
+    resolver: zodResolver(inviteSchema),
+    defaultValues: { emails: [""] },
+  });
 
   async function loadMembers() {
     setLoading(true);
@@ -72,28 +92,21 @@ export default function OrganizationsPage() {
     void loadMembers();
   }, [organizationId]);
 
-  async function handleInvite(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const result = validateEmailOnly(inviteEmail);
-    if (!result.valid) {
-      setInviteError(t("auth.error.invalidEmail"));
-      return;
-    }
-    setInviteError(null);
+  async function handleInvite(values: InviteInput) {
     setInviteSuccess(null);
+    const email = values.emails[0] ?? "";
     try {
       await api.organizations.inviteMember({
         organizationId,
-        email: inviteEmail,
-        role: inviteRole,
+        email,
+        role: "PHARMACIST",
         expiresInDays: 7,
       });
-      setInviteSuccess(`${t("members.invite.success")} ${inviteEmail}`);
-      setInviteEmail("");
-      setInviteOpen(false);
+      setInviteSuccess(`${t("members.invite.success")} ${email}`);
+      form.reset();
       await loadMembers();
     } catch {
-      setInviteError(t("error.generic"));
+      form.setError("root", { type: "server", message: t("error.generic") });
     }
   }
 
@@ -127,40 +140,53 @@ export default function OrganizationsPage() {
                   {t("members.description")}
                 </DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleInvite} className="flex flex-col gap-4">
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="invite-email">{t("members.email")}</Label>
-                  <Input
-                    id="invite-email"
-                    type="email"
-                    value={inviteEmail}
-                    onChange={(event) => setInviteEmail(event.target.value)}
-                    aria-invalid={inviteError !== null}
-                  />
-                  {inviteError !== null && (
-                    <p className="text-destructive text-sm">{inviteError}</p>
+              <form
+                onSubmit={form.handleSubmit(handleInvite)}
+                className="flex flex-col gap-4"
+              >
+                <FormField
+                  control={form.control}
+                  name="emails"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("members.email")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          id="invite-email"
+                          type="email"
+                          value={field.value[0] ?? ""}
+                          onChange={(event) =>
+                            field.onChange([event.target.value])
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </div>
+                />
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="invite-role">{t("members.role")}</Label>
-                  <select
-                    id="invite-role"
-                    value={inviteRole}
-                    onChange={(event) =>
-                      setInviteRole(event.target.value as MemberRole)
-                    }
-                    className="border-input bg-background flex h-9 w-full rounded-md border px-3 text-sm"
-                  >
-                    {memberRoles.map((role) => (
-                      <option key={role} value={role}>
-                        {t(ROLE_LABEL[role])}
-                      </option>
-                    ))}
-                  </select>
+                  <Select value="PHARMACIST" onValueChange={(_value) => {}}>
+                    <SelectTrigger id="invite-role">
+                      <SelectValue placeholder={t("members.role")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {memberRoles.map((role) => (
+                        <SelectItem key={role} value={role}>
+                          {t(ROLE_LABEL[role])}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                {inviteSuccess !== null && (
+                {inviteSuccess && (
                   <p role="status" className="text-sm">
                     {inviteSuccess}
+                  </p>
+                )}
+                {form.formState.errors.root?.message && (
+                  <p role="alert" className="text-destructive text-sm">
+                    {form.formState.errors.root.message}
                   </p>
                 )}
                 <DialogFooter>

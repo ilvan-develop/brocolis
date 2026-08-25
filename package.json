@@ -27,7 +27,11 @@
     "circular": "madge --circular --ts-config ./tsconfig.base.json --extensions ts packages/ apps/",
     "depcruise": "dependency-cruiser --config .dependency-cruiser.cjs --output-type err packages apps",
     "format": "biome format --write .",
-    "check": "biome check --write ."
+    "check": "biome check --write .",
+    "prepare": "husky",
+    "lint-staged": "lint-staged",
+    "env:encrypt": "dotenvx encrypt",
+    "env:decrypt": "dotenvx decrypt"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
@@ -37,6 +41,7 @@
     "@dotenvx/dotenvx": "catalog:",
     "@playwright/test": "catalog:",
     "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "dependency-cruiser": "^18.2.0",
     "husky": "catalog:",
     "lint-staged": "catalog:",

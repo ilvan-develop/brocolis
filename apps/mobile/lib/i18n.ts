@@ -1,8 +1,8 @@
 import {
+  t as centralT,
   defaultLocale,
   type Locale,
   type MessageKey,
-  t as centralT,
 } from "@brocolis/i18n";
 
 // Mensagens vivem em @brocolis/i18n (fonte única de verdade, partilhada com

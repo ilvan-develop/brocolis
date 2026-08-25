@@ -3,47 +3,34 @@
 import { t } from "@brocolis/i18n";
 import { Button } from "@brocolis/ui/components/button";
 import { Input } from "@brocolis/ui/components/input";
-import { Label } from "@brocolis/ui/components/label";
+import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useState } from "react";
-import { type ApiClient, api as defaultApi } from "@/lib/api";
+import { useForm } from "react-hook-form";
 import {
-  type SignInValues,
-  type ValidationErrorKey,
-  type ValidationField,
-  validateSignIn,
-} from "@/lib/validation";
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/form";
+import { type ApiClient, api as defaultApi } from "@/lib/api";
+import { type SignInInput, signInSchema } from "@/lib/schemas";
 
 type SignInFormProps = {
-  onSubmit?: (values: SignInValues) => Promise<void>;
+  onSubmit?: (values: SignInInput) => Promise<void>;
   api?: ApiClient;
 };
 
 export function SignInForm({ onSubmit, api = defaultApi }: SignInFormProps) {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState<
-    Partial<Record<ValidationField, ValidationErrorKey>>
-  >({});
-  const [submitting, setSubmitting] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
+  const form = useForm<SignInInput>({
+    resolver: zodResolver(signInSchema),
+    defaultValues: { email: "", password: "" },
+  });
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    const values: SignInValues = { email, password };
-    const result = validateSignIn(values);
-    if (!result.valid) {
-      setErrors(result.errors);
-      return;
-    }
-
-    setErrors({});
-    setServerError(null);
-    setSubmitting(true);
-
+  async function handleSubmit(values: SignInInput) {
     try {
       if (onSubmit) {
         await onSubmit(values);
@@ -53,60 +40,83 @@ export function SignInForm({ onSubmit, api = defaultApi }: SignInFormProps) {
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "";
-      setServerError(message || t("error.generic"));
-    } finally {
-      setSubmitting(false);
+      form.setError("root", {
+        type: "server",
+        message: message || t("error.generic"),
+      });
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="signin-email">{t("auth.signin.email")}</Label>
-        <Input
-          id="signin-email"
-          type="email"
-          autoComplete="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          aria-invalid={errors.email !== undefined}
-          aria-describedby={errors.email ? "signin-email-error" : undefined}
-        />
-        {errors.email !== undefined && (
-          <p id="signin-email-error" className="text-destructive text-sm">
-            {t(errors.email)}
-          </p>
+    <form
+      onSubmit={form.handleSubmit(handleSubmit)}
+      className="flex flex-col gap-4"
+      noValidate
+    >
+      <FormField
+        control={form.control}
+        name="email"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel htmlFor="signin-email">
+              {t("auth.signin.email")}
+            </FormLabel>
+            <FormControl>
+              <Input
+                id="signin-email"
+                type="email"
+                autoComplete="email"
+                {...field}
+                aria-invalid={!!form.formState.errors.email}
+                aria-describedby={
+                  form.formState.errors.email ? "signin-email-error" : undefined
+                }
+              />
+            </FormControl>
+            <FormMessage id="signin-email-error" />
+          </FormItem>
         )}
-      </div>
+      />
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="signin-password">{t("auth.signin.password")}</Label>
-        <Input
-          id="signin-password"
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          aria-invalid={errors.password !== undefined}
-          aria-describedby={
-            errors.password ? "signin-password-error" : undefined
-          }
-        />
-        {errors.password !== undefined && (
-          <p id="signin-password-error" className="text-destructive text-sm">
-            {t(errors.password)}
-          </p>
+      <FormField
+        control={form.control}
+        name="password"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel htmlFor="signin-password">
+              {t("auth.signin.password")}
+            </FormLabel>
+            <FormControl>
+              <Input
+                id="signin-password"
+                type="password"
+                autoComplete="current-password"
+                {...field}
+                aria-invalid={!!form.formState.errors.password}
+                aria-describedby={
+                  form.formState.errors.password
+                    ? "signin-password-error"
+                    : undefined
+                }
+              />
+            </FormControl>
+            <FormMessage id="signin-password-error" />
+          </FormItem>
         )}
-      </div>
+      />
 
-      {serverError !== null && (
+      {form.formState.errors.root?.message && (
         <p role="alert" className="text-destructive text-sm">
-          {serverError}
+          {form.formState.errors.root.message}
         </p>
       )}
 
-      <Button type="submit" disabled={submitting} className="w-full">
-        {t("auth.signin.submit")}
+      <Button
+        type="submit"
+        disabled={form.formState.isSubmitting}
+        className="w-full"
+      >
+        {form.formState.isSubmitting ? "..." : t("auth.signin.submit")}
       </Button>
 
       <div className="flex flex-col items-center gap-2 text-sm">

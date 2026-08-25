@@ -72,6 +72,15 @@ function nextStepId(
   return next ?? current;
 }
 
+function previousStepId(
+  current: OnboardingStepId,
+  steps: readonly OnboardingStepId[],
+): OnboardingStepId {
+  const index = steps.indexOf(current);
+  const prev = steps[index - 1];
+  return prev ?? current;
+}
+
 export function selectPortal(
   state: OnboardingState,
   portal: OnboardingPortalId,
@@ -121,6 +130,14 @@ export function nextStep(state: OnboardingState): OnboardingState {
   }
   const steps = stepsForPortal(state.portal);
   return { ...state, step: nextStepId(state.step, steps) };
+}
+
+export function previousStep(state: OnboardingState): OnboardingState {
+  if (state.portal === null) {
+    return { ...state };
+  }
+  const steps = stepsForPortal(state.portal);
+  return { ...state, step: previousStepId(state.step, steps) };
 }
 
 export function stepIndex(state: OnboardingState): number {

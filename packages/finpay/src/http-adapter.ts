@@ -1,11 +1,23 @@
-import type { FinPayAdapter, CreateIntentInput, FinpayIntent } from "./index.js";
+import type {
+  CreateIntentInput,
+  FinPayAdapter,
+  FinpayIntent,
+} from "./types.js";
 
 export type HttpFinPayOptions = {
   baseUrl: string;
   apiKey: string | undefined;
 };
 
-const STATUS_VALUES = ["PENDING", "PROCESSING", "CONFIRMED", "EXPIRED", "DECLINED", "FAILED", "REFUNDED"] as const;
+const STATUS_VALUES = [
+  "PENDING",
+  "PROCESSING",
+  "CONFIRMED",
+  "EXPIRED",
+  "DECLINED",
+  "FAILED",
+  "REFUNDED",
+] as const;
 
 function toStatus(value: unknown): FinpayIntent["status"] {
   const status = String(value ?? "PENDING").toUpperCase();
@@ -69,7 +81,9 @@ export class HttpFinPayAdapter implements FinPayAdapter {
       throw new Error(`FinPay getIntent failed: ${response.status} ${text}`);
     }
     const data = (await response.json()) as Record<string, unknown>;
-    const amount = (data.amount ?? data.controlAmount) as Record<string, unknown> | undefined;
+    const amount = (data.amount ?? data.controlAmount) as
+      | Record<string, unknown>
+      | undefined;
     return {
       intentId: String(data.id ?? data.intentId ?? intentId),
       orderId: String(data.orderId ?? data.clientReference ?? ""),
@@ -84,19 +98,24 @@ export class HttpFinPayAdapter implements FinPayAdapter {
   }
 
   async refund(intentId: string): Promise<FinpayIntent> {
-    const response = await fetch(`${this.baseUrl}/api/payments/${intentId}/refund`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {}),
+    const response = await fetch(
+      `${this.baseUrl}/api/payments/${intentId}/refund`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {}),
+        },
       },
-    });
+    );
     if (!response.ok) {
       const text = await response.text();
       throw new Error(`FinPay refund failed: ${response.status} ${text}`);
     }
     const data = (await response.json()) as Record<string, unknown>;
-    const amount = (data.amount ?? data.controlAmount) as Record<string, unknown> | undefined;
+    const amount = (data.amount ?? data.controlAmount) as
+      | Record<string, unknown>
+      | undefined;
     return {
       intentId: String(data.id ?? data.intentId ?? intentId),
       orderId: String(data.orderId ?? data.clientReference ?? ""),

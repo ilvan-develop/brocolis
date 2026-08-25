@@ -35,10 +35,7 @@ describe("OrderStatusTimeline", () => {
 
   it("does not render the canceled row for a normal in-progress status", () => {
     render(
-      <OrderStatusTimeline
-        statuses={allStatuses}
-        currentStatus="IN_TRANSIT"
-      />,
+      <OrderStatusTimeline statuses={allStatuses} currentStatus="IN_TRANSIT" />,
     );
 
     expect(screen.queryByText("Cancelado")).toBeNull();

@@ -13,6 +13,7 @@
       "@brocolis/auth": ["../../packages/auth/src/index.ts"],
       "@brocolis/contracts": ["../../packages/contracts/src/index.ts"],
       "@brocolis/db": ["../../packages/db/src/index.ts"],
+      "@brocolis/db/src/generated/prisma/client.js": ["../../packages/db/src/generated/prisma/client.js"],
       "@brocolis/finpay": ["../../packages/finpay/src/index.ts"],
       "@brocolis/markets": ["../../packages/markets/src/index.ts"],
       "@brocolis/observability": ["../../packages/observability/src/index.ts"],

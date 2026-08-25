@@ -1,6 +1,5 @@
 import {
   type AuditExplorerEntry,
-  type AuditExplorerQuery,
   auditExplorerQuerySchema,
   type ComplianceDecision,
   policyForMarket,
@@ -73,7 +72,8 @@ export class ComplianceService {
     return {
       marketCode: record.marketCode,
       controlledSubstances: record.controlledSubstances as string[],
-      prescriptionRequiredCategories: record.prescriptionRequiredCategories as string[],
+      prescriptionRequiredCategories:
+        record.prescriptionRequiredCategories as string[],
       maxPrescriptionDaysValid: record.maxPrescriptionDaysValid,
       licenseRequirements: record.licenseRequirements as string[],
       saftEnabled: record.saftEnabled,
@@ -85,7 +85,9 @@ export class ComplianceService {
     return this.policyForMarketOrDefault(marketCode);
   }
 
-  async policyForMarketOrDefault(marketCode: string): Promise<RegulatoryPolicy> {
+  async policyForMarketOrDefault(
+    marketCode: string,
+  ): Promise<RegulatoryPolicy> {
     const db = await database();
     const normalized = marketCode.trim().toUpperCase();
     const record = await db.regulatoryPolicy.findUnique({
@@ -95,7 +97,8 @@ export class ComplianceService {
       return {
         marketCode: record.marketCode,
         controlledSubstances: record.controlledSubstances as string[],
-        prescriptionRequiredCategories: record.prescriptionRequiredCategories as string[],
+        prescriptionRequiredCategories:
+          record.prescriptionRequiredCategories as string[],
         maxPrescriptionDaysValid: record.maxPrescriptionDaysValid,
         licenseRequirements: record.licenseRequirements as string[],
         saftEnabled: record.saftEnabled,
@@ -111,7 +114,8 @@ export class ComplianceService {
     return records.map((r: any) => ({
       marketCode: r.marketCode,
       controlledSubstances: r.controlledSubstances as string[],
-      prescriptionRequiredCategories: r.prescriptionRequiredCategories as string[],
+      prescriptionRequiredCategories:
+        r.prescriptionRequiredCategories as string[],
       maxPrescriptionDaysValid: r.maxPrescriptionDaysValid,
       licenseRequirements: r.licenseRequirements as string[],
       saftEnabled: r.saftEnabled,
@@ -388,22 +392,18 @@ export class ComplianceService {
   }
 
   private async emitAudit(entry: AuditLogEntry): Promise<void> {
-    try {
-      const db = await database();
-      await db.auditEvent.create({
-        data: {
-          organizationId: entry.organizationId,
-          marketCode: entry.marketCode,
-          actorType: entry.actorType,
-          actorId: entry.actorId,
-          action: entry.action,
-          resourceType: entry.resourceType,
-          resourceId: entry.resourceId,
-          payload: entry.payload,
-        },
-      });
-    } catch {
-      // DB ainda não wired — auditoria fica registada em memória.
-    }
+    const db = await database();
+    await db.auditEvent.create({
+      data: {
+        organizationId: entry.organizationId,
+        marketCode: entry.marketCode,
+        actorType: entry.actorType,
+        actorId: entry.actorId,
+        action: entry.action,
+        resourceType: entry.resourceType,
+        resourceId: entry.resourceId,
+        payload: entry.payload,
+      },
+    });
   }
 }

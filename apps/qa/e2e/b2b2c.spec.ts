@@ -20,4 +20,11 @@ test.describe("B2B2C Network E2E", () => {
       page.getByRole("heading", { name: /eventos de auditoria|audit events/i }),
     ).toBeVisible();
   });
+
+  test("Storefront page loads", async ({ page }) => {
+    await page.goto("/");
+    await expect(
+      page.getByRole("heading", { name: /catálogo|catalog/i }),
+    ).toBeVisible();
+  });
 });

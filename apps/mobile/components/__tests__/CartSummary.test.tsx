@@ -3,9 +3,7 @@ import { CartSummary } from "@/components/CartSummary";
 
 describe("CartSummary", () => {
   it("formats amounts using @brocolis/formatters (AOA -> Kz)", () => {
-    render(
-      <CartSummary subtotal={1500} currency="AOA" itemCount={1} />,
-    );
+    render(<CartSummary subtotal={1500} currency="AOA" itemCount={1} />);
 
     // formatCurrency(1500, "AOA") groups thousands and appends the Kz symbol.
     expect(screen.getByText(/1.500 ?Kz/)).toBeTruthy();

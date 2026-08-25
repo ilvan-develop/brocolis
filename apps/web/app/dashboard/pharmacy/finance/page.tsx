@@ -7,7 +7,6 @@ import {
   formatPercentage,
 } from "@brocolis/formatters";
 import { t } from "@brocolis/i18n";
-import { Badge } from "@brocolis/ui/components/badge";
 import { Button } from "@brocolis/ui/components/button";
 import {
   Card,
@@ -17,14 +16,9 @@ import {
   CardTitle,
 } from "@brocolis/ui/components/card";
 import { Skeleton } from "@brocolis/ui/components/skeleton";
-import { useState } from "react";
 import { SettlementStatusBadge } from "@/components/pharmacy/settlement-status-badge";
-import { useSimulatedLoad } from "@/hooks/use-simulated-load";
-import {
-  DEMO_PHARMACY_SETTLEMENTS,
-  PAYOUT_METHODS,
-  settlementBalance,
-} from "@/lib/pharmacy-finance";
+import { useSession } from "@/hooks/use-session";
+import { usePharmacySettlements } from "@/lib/pharmacy-query";
 
 function SettlementTable({
   settlements,
@@ -45,62 +39,54 @@ function SettlementTable({
             {t("pharmacy.finance.commission")}
           </th>
           <th className="py-2 pr-4 font-medium">{t("pharmacy.finance.net")}</th>
-          <th className="py-2 pr-4 font-medium">
-            {t("pharmacy.finance.reserve")}
-          </th>
-          <th className="py-2 pr-4 font-medium">
-            {t("pharmacy.finance.status")}
-          </th>
-          <th className="py-2 font-medium">
-            {t("pharmacy.finance.finpayRef")}
-          </th>
+          <th className="py-2 font-medium">{t("pharmacy.finance.status")}</th>
         </tr>
       </thead>
       <tbody>
-        {settlements.map((s) => {
-          const _balance = settlementBalance(s);
-          return (
-            <tr key={s.id} className="border-b last:border-0">
-              <td className="py-2 pr-4 text-muted-foreground">
-                {formatDate(s.periodStart)} – {formatDate(s.periodEnd)}
-              </td>
-              <td className="py-2 pr-4 font-medium">
-                {formatCurrency(s.grossMinor, "AOA")}
-              </td>
-              <td className="py-2 pr-4 text-muted-foreground">
-                {formatCurrency(s.commissionMinor, "AOA")}
-                <span className="block text-xs">
-                  {formatPercentage(s.commissionRateBps / 100, { decimals: 1 })}
-                </span>
-              </td>
-              <td className="py-2 pr-4">{formatCurrency(s.netMinor, "AOA")}</td>
-              <td className="py-2 pr-4 text-muted-foreground">
-                {formatCurrency(s.reserveMinor, "AOA")}
-              </td>
-              <td className="py-2 pr-4">
-                <SettlementStatusBadge status={s.status} />
-              </td>
-              <td className="text-muted-foreground py-2">
-                {s.finpayRef ? (
-                  <Badge variant="outline">{s.finpayRef}</Badge>
-                ) : (
-                  "—"
-                )}
-              </td>
-            </tr>
-          );
-        })}
+        {settlements.map((settlement) => (
+          <tr key={settlement.id} className="border-b last:border-0">
+            <td className="py-2 pr-4">
+              {formatDate(settlement.periodStart)} —{" "}
+              {formatDate(settlement.periodEnd)}
+            </td>
+            <td className="py-2 pr-4">
+              {formatCurrency(settlement.grossMinor, "AOA")}
+            </td>
+            <td className="py-2 pr-4">
+              {formatPercentage(settlement.commissionRateBps / 100)}
+            </td>
+            <td className="py-2 pr-4">
+              {formatCurrency(settlement.netMinor, "AOA")}
+            </td>
+            <td className="py-2">
+              <SettlementStatusBadge status={settlement.status} />
+            </td>
+          </tr>
+        ))}
       </tbody>
     </table>
   );
 }
 
 export default function PharmacyFinancePage() {
-  const loading = useSimulatedLoad();
-  const [settlements] = useState<PharmacySettlement[]>(() => [
-    ...DEMO_PHARMACY_SETTLEMENTS,
-  ]);
-  const [error, setError] = useState<string | null>(null);
+  const { state } = useSession();
+  const scope = {
+    organizationId: state.organization?.id ?? "",
+    marketCode: state.marketCode ?? "AO",
+  };
+
+  const settlementsQuery = usePharmacySettlements(scope);
+  const settlement = settlementsQuery.data;
+  const isLoading = settlementsQuery.isLoading;
+  const isError = settlementsQuery.isError;
+
+  const balance = settlement
+    ? {
+        gross: settlement.grossMinor,
+        commission: settlement.commissionMinor,
+        net: settlement.netMinor,
+      }
+    : { gross: 0, commission: 0, net: 0 };
 
   return (
     <div className="flex flex-col gap-6">
@@ -113,64 +99,81 @@ export default function PharmacyFinancePage() {
         </p>
       </header>
 
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("pharmacy.finance.gross")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-8 w-24" />
+            ) : (
+              <p className="text-2xl font-semibold">
+                {formatCurrency(balance.gross, "AOA")}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("pharmacy.finance.commission")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-8 w-24" />
+            ) : (
+              <p className="text-2xl font-semibold">
+                {formatCurrency(balance.commission, "AOA")}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("pharmacy.finance.net")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-8 w-24" />
+            ) : (
+              <p className="text-2xl font-semibold">
+                {formatCurrency(balance.net, "AOA")}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
-        <CardHeader className="flex flex-col gap-1">
+        <CardHeader>
           <CardTitle>{t("pharmacy.finance.settlements")}</CardTitle>
           <CardDescription>{t("pharmacy.finance.subtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {isLoading ? (
             <div className="flex flex-col gap-2" aria-busy="true">
               <Skeleton className="h-8 w-full" />
               <Skeleton className="h-8 w-full" />
-              <Skeleton className="h-8 w-full" />
             </div>
-          ) : error !== null ? (
+          ) : isError ? (
             <div className="flex flex-col items-start gap-2">
               <p role="alert" className="text-destructive text-sm">
-                {error}
+                {t("error.generic")}
               </p>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setError(null)}
+                onClick={() => settlementsQuery.refetch()}
               >
                 {t("catalog.retry")}
               </Button>
             </div>
-          ) : settlements.length === 0 ? (
+          ) : settlement === undefined ? (
             <p className="text-muted-foreground text-sm">
               {t("pharmacy.finance.empty")}
             </p>
           ) : (
-            <SettlementTable settlements={settlements} />
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-col gap-1">
-          <CardTitle>{t("pharmacy.finance.methods")}</CardTitle>
-          <CardDescription>
-            {t("pharmacy.finance.methodsDescription")}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex flex-col gap-2" aria-busy="true">
-              <Skeleton className="h-16 w-full" />
-              <Skeleton className="h-16 w-full" />
-            </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-3">
-              {PAYOUT_METHODS.map((method) => (
-                <Card key={method.id} className="gap-2 py-4">
-                  <CardContent>
-                    <Badge variant="secondary">{t(method.key)}</Badge>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <SettlementTable settlements={[settlement]} />
           )}
         </CardContent>
       </Card>

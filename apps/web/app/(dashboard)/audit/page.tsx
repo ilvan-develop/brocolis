@@ -1,6 +1,7 @@
 "use client";
 
 import { tF6 } from "@brocolis/i18n";
+import { Button } from "@brocolis/ui/components/button";
 import {
   Card,
   CardContent,
@@ -8,11 +9,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@brocolis/ui/components/card";
-import { Button } from "@brocolis/ui/components/button";
 import { Input } from "@brocolis/ui/components/input";
 import { Skeleton } from "@brocolis/ui/components/skeleton";
-import { useAuditEvents } from "@/lib/audit-query";
 import type { AuditEvent } from "@/lib/audit-fixtures";
+import { useAuditEvents } from "@/lib/audit-query";
 
 export default function AuditExplorerPage() {
   const { events, isLoading, isError, refetch } = useAuditEvents();
@@ -72,7 +72,9 @@ export default function AuditExplorerPage() {
                       className="flex flex-col gap-1 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between"
                     >
                       <div className="flex flex-col">
-                        <span className="text-sm font-medium">{event.action}</span>
+                        <span className="text-sm font-medium">
+                          {event.action}
+                        </span>
                         <span className="text-muted-foreground text-xs">
                           {event.resource}
                         </span>

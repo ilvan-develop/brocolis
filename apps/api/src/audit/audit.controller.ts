@@ -21,14 +21,14 @@ export class AuditController {
   constructor(private readonly audit: AuditService) {}
 
   @Get("events")
-  queryEvents(@Query() query: RawQuery) {
+  async queryEvents(@Query() query: RawQuery) {
     return this.audit.query(coerceExplorerQuery(query));
   }
 
   @Get("events/export")
   @Header("Content-Type", "text/csv")
-  exportCsv(@Query() query: RawQuery, @Res() res: Response) {
-    const entries = this.audit.query(coerceExplorerQuery(query));
+  async exportCsv(@Query() query: RawQuery, @Res() res: Response) {
+    const entries = await this.audit.query(coerceExplorerQuery(query));
     const csv = this.audit.exportCsv(entries);
     res.send(csv);
   }

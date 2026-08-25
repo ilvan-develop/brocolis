@@ -306,7 +306,24 @@ export function verifyPassword(password: string, stored: string): boolean {
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
-/** Token de sessão: 32 bytes aleatórios em hex (64 chars). */
-export function createSessionToken(): string {
-  return randomBytes(32).toString("hex");
+import jwt from "jsonwebtoken";
+
+export function createSessionToken(secret: string): string {
+  const payload = {
+    sub: randomBytes(32).toString("hex"),
+    iat: Math.floor(Date.now() / 1000),
+  };
+  return jwt.sign(payload, secret, { expiresIn: "24h" });
+}
+
+export function verifySessionToken(
+  token: string,
+  secret: string,
+): { sub: string } | null {
+  try {
+    const decoded = jwt.verify(token, secret) as { sub: string };
+    return { sub: decoded.sub };
+  } catch {
+    return null;
+  }
 }

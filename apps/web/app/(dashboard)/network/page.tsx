@@ -1,6 +1,7 @@
 "use client";
 
 import { tF6 } from "@brocolis/i18n";
+import { Badge } from "@brocolis/ui/components/badge";
 import {
   Card,
   CardContent,
@@ -8,10 +9,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@brocolis/ui/components/card";
-import { Badge } from "@brocolis/ui/components/badge";
 import { Skeleton } from "@brocolis/ui/components/skeleton";
 import { useNetworkTimeline } from "@/lib/network-query";
-import { NETWORK_STAGE_KEY, NETWORK_STATUS_KEY, NETWORK_STATUS_VARIANT, type NetworkStageStatus, type NetworkStageName } from "@/lib/network-timeline";
+import {
+  NETWORK_STAGE_KEY,
+  NETWORK_STATUS_KEY,
+  NETWORK_STATUS_VARIANT,
+  type NetworkStageName,
+  type NetworkStageStatus,
+} from "@/lib/network-timeline";
 
 export default function NetworkPage() {
   const { stages, isLoading, isError, refetch } = useNetworkTimeline();
@@ -47,8 +53,7 @@ export default function NetworkPage() {
             <CardDescription>
               {tF6("b2b2c.flow.consumer_order")} →{" "}
               {tF6("b2b2c.flow.pharmacy_confirmation")} →{" "}
-              {tF6("b2b2c.flow.supplier_pull")} →{" "}
-              {tF6("b2b2c.flow.delivery")}
+              {tF6("b2b2c.flow.supplier_pull")} → {tF6("b2b2c.flow.delivery")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -67,14 +72,29 @@ export default function NetworkPage() {
                   >
                     <div className="flex flex-1 flex-col gap-1">
                       <span className="text-sm font-medium">
-                        {tF6(NETWORK_STAGE_KEY[stage.stage as NetworkStageName])}
+                        {tF6(
+                          NETWORK_STAGE_KEY[stage.stage as NetworkStageName],
+                        )}
                       </span>
                       <span className="text-muted-foreground text-xs">
-                         {stage.owner} · {tF6(NETWORK_STATUS_KEY[stage.status as NetworkStageStatus])}
+                        {stage.owner} ·{" "}
+                        {tF6(
+                          NETWORK_STATUS_KEY[
+                            stage.status as NetworkStageStatus
+                          ],
+                        )}
                       </span>
                     </div>
-                    <Badge variant={NETWORK_STATUS_VARIANT[stage.status as NetworkStageStatus]}>
-                      {tF6(NETWORK_STATUS_KEY[stage.status as NetworkStageStatus])}
+                    <Badge
+                      variant={
+                        NETWORK_STATUS_VARIANT[
+                          stage.status as NetworkStageStatus
+                        ]
+                      }
+                    >
+                      {tF6(
+                        NETWORK_STATUS_KEY[stage.status as NetworkStageStatus],
+                      )}
                     </Badge>
                   </div>
                 ))}

@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import { HtmlLang } from "@/components/html-lang";
+import { LocaleProvider } from "@/components/locale-provider";
 import { SessionProvider } from "@/components/session-provider";
+import { SkipLink } from "@/components/skip-link";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
@@ -15,7 +18,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt" suppressHydrationWarning>
+    <HtmlLang>
       <body>
         <ThemeProvider
           attribute="class"
@@ -23,9 +26,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <SessionProvider>{children}</SessionProvider>
+          <LocaleProvider>
+            <SessionProvider>
+              <SkipLink />
+              {children}
+            </SessionProvider>
+          </LocaleProvider>
         </ThemeProvider>
       </body>
-    </html>
+    </HtmlLang>
   );
 }

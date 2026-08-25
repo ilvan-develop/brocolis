@@ -1,12 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { NetworkStage } from "./network-timeline";
 import {
   demoBreachedTimeline,
   demoCompletedTimeline,
   demoInFlightTimeline,
 } from "./network-fixtures";
+import type { NetworkStage } from "./network-timeline";
 
 export type NetworkTimelineQuery = {
   stages: NetworkStage[];
