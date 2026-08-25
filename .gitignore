@@ -46,6 +46,10 @@ apps/mobile/web-build/
 apps/qa/test-results/
 apps/qa/playwright-report/
 playwright/.cache/
+test-results/
+
+# Tool outputs
+apps/api/biome-output.txt
 
 # Local
 .vercel/
